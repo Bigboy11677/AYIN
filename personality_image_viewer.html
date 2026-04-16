@@ -72,6 +72,9 @@
       .w-full.max-w-4xl {
         max-width: 100%;
         position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
       }
 
       .image-container {
@@ -89,13 +92,18 @@
         object-fit: contain;
       }
 
-      /* 移动端 - 按钮放在图片上方 */
-      .back-button {
-        position: relative !important;
+      /* 移动端 - 返回按钮放在图片上方，只保留返回符号 */
+      .w-full.max-w-4xl a {
+        position: static !important;
         top: auto !important;
         right: auto !important;
+        margin-right: 0 !important;
+        margin-bottom: 0.75rem !important;
         transform: none !important;
-        margin-bottom: 2rem;
+        z-index: 10;
+        font-size: 1rem;
+        padding: 0.5rem 0.75rem;
+        animation-delay: 0.5s !important;
       }
     }
 
@@ -120,15 +128,13 @@
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
   <!-- 图片容器 -->
   <div class="w-full max-w-4xl flex items-center justify-center pt-8 relative">
-    <!-- 返回按钮 - 在图片右边，垂直居中 -->
-    <a href="javascript:history.back()" class="animate-fade-in-right flex items-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 absolute right-0 top-1/2 -translate-y-1/2" style="margin-right: -6rem; animation-delay: 1s;">
-      <i class="fa fa-arrow-left text-xl"></i>
-      <span class="font-semibold text-lg">返回结果</span>
-    </a>
-
     <div class="image-container animate-fade-in-up" style="animation-delay: 0.4s;">
       <img id="personalityImage" src="" alt="人格报告" class="max-w-full max-h-[80vh] object-contain rounded-lg">
     </div>
+    <!-- 返回按钮 - 在图片右边，垂直居中，更紧凑 -->
+    <a href="javascript:history.back()" class="animate-fade-in-right flex items-center px-3 py-2.5 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 absolute right-0 top-1/2 -translate-y-1/2" style="animation-delay: 1s;">
+      <i class="fa fa-arrow-left text-lg"></i>
+    </a>
   </div>
 
   <!-- 交互JS -->

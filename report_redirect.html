@@ -165,12 +165,26 @@
     @media (max-width: 768px) {
       .content-container {
         padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
       }
       
       .report-image-container {
         max-width: 95%;
         max-height: 70vh;
         padding: 0.5rem;
+      }
+      
+      /* 移动端 - 返回按钮放在图片上方，只保留返回符号 */
+      #backBtn {
+        position: static !important;
+        top: auto !important;
+        right: auto !important;
+        margin-bottom: 0.75rem !important;
+        z-index: 10;
+        font-size: 1rem;
+        padding: 0.5rem 0.75rem;
       }
     }
   </style>
@@ -183,15 +197,15 @@
   
   <!-- 内容容器 -->
   <div class="content-container">
+    <!-- 返回按钮 -->
+    <button id="backBtn" class="px-4 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 mb-2">
+      <i class="fa fa-arrow-left text-xl"></i>
+    </button>
+    
     <!-- 报告图片 -->
-    <div class="report-image-container fade-in mb-8">
+    <div class="report-image-container fade-in">
       <img src="images/report_template.png" alt="人格测试报告" class="report-image">
     </div>
-    
-    <!-- 返回按钮 -->
-    <button id="backBtn" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-all duration-300">
-      <i class="fa fa-arrow-left mr-2"></i> 返回结果页
-    </button>
   </div>
 
   <!-- 交互JS -->
