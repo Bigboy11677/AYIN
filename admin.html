@@ -48,6 +48,26 @@
   </style>
 </head>
 <body class="min-h-screen bg-gray-50">
+  <!-- 管理员登录模态框 -->
+  <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="fa fa-lock text-white text-2xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">管理员登录</h2>
+        <p class="text-gray-600">请输入管理员密码以访问后台</p>
+      </div>
+      <div class="space-y-4">
+        <input type="password" id="adminPassword" placeholder="请输入管理员密码" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+        <button id="loginBtn" class="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
+          登录
+        </button>
+        <p id="loginError" class="text-red-500 text-sm text-center hidden">密码错误，请重试</p>
+      </div>
+    </div>
+  </div>
+
   <!-- 导航栏 -->
   <nav class="bg-primary text-white shadow-md">
     <div class="container mx-auto px-4 py-3 flex justify-between items-center">
@@ -56,12 +76,15 @@
         <button id="refreshBtn" class="px-4 py-2 bg-white text-primary rounded-lg font-medium hover:bg-gray-100 transition-colors">
           <i class="fa fa-refresh mr-2"></i> 刷新数据
         </button>
+        <button id="logoutBtn" onclick="logout()" class="ml-2 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors">
+          <i class="fa fa-sign-out mr-2"></i> 登出
+        </button>
       </div>
     </div>
   </nav>
 
-  <!-- 主内容区 -->
-  <main class="container mx-auto px-4 py-8">
+  <!-- 主内容区（默认隐藏，需登录后显示） -->
+  <main id="adminContent" class="container mx-auto px-4 py-8 hidden">
     <!-- 统计信息 -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="bg-white rounded-xl shadow-md p-6">
@@ -151,20 +174,86 @@
   <!-- 交互JS -->
   <script>
     // 全局变量
+    const API_BASE = 'https://ayin-production.up.railway.app'; // 后端API地址
+    const ADMIN_PASSWORD = 'WZRwzr011205'; // 管理员密码（生产环境应从服务器获取）
     let users = [];
     let filteredUsers = [];
     let currentPage = 1;
     const pageSize = 10;
     let personalityTypes = [];
+    let isLoggedIn = false;
 
     // 初始化
     document.addEventListener('DOMContentLoaded', function() {
-      loadUsers();
+      // 检查是否已登录
+      checkLoginStatus();
       bindEvents();
     });
 
+    // 检查登录状态
+    function checkLoginStatus() {
+      const savedLogin = localStorage.getItem('adminLoggedIn');
+      const savedTime = localStorage.getItem('adminLoginTime');
+      const now = Date.now();
+
+      // 登录状态有效期24小时
+      if (savedLogin === 'true' && savedTime && (now - parseInt(savedTime)) < 24 * 60 * 60 * 1000) {
+        showAdminContent();
+      } else {
+        showLoginModal();
+      }
+    }
+
+    // 显示登录模态框
+    function showLoginModal() {
+      document.getElementById('loginModal').classList.remove('hidden');
+      document.getElementById('adminContent').classList.add('hidden');
+      isLoggedIn = false;
+    }
+
+    // 显示管理内容
+    function showAdminContent() {
+      document.getElementById('loginModal').classList.add('hidden');
+      document.getElementById('adminContent').classList.remove('hidden');
+      isLoggedIn = true;
+      localStorage.setItem('adminLoggedIn', 'true');
+      localStorage.setItem('adminLoginTime', Date.now().toString());
+      loadUsers();
+    }
+
+    // 登录验证
+    function verifyLogin(password) {
+      if (password === ADMIN_PASSWORD) {
+        showAdminContent();
+      } else {
+        document.getElementById('loginError').classList.remove('hidden');
+        document.getElementById('adminPassword').value = '';
+      }
+    }
+
+    // 登出
+    function logout() {
+      localStorage.removeItem('adminLoggedIn');
+      localStorage.removeItem('adminLoginTime');
+      showLoginModal();
+    }
+
     // 绑定事件
     function bindEvents() {
+      // 登录按钮
+      document.getElementById('loginBtn').addEventListener('click', function() {
+        const password = document.getElementById('adminPassword').value;
+        verifyLogin(password);
+      });
+
+      // 密码输入框回车
+      document.getElementById('adminPassword').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          const password = document.getElementById('adminPassword').value;
+          verifyLogin(password);
+        }
+      });
+
       // 刷新按钮
       document.getElementById('refreshBtn').addEventListener('click', loadUsers);
       
@@ -214,7 +303,7 @@
       `;
       
       // 从后端API获取数据
-      fetch('/api/users')
+      fetch(API_BASE + '/api/users')
         .then(response => response.json())
         .then(data => {
           if (data.success && data.data) {
@@ -324,16 +413,16 @@
       
       tableBody.innerHTML = pageUsers.map(user => `
         <tr>
-          <td class="px-6 py-4 whitespace-nowrap">${user.id}</td>
+          <td class="px-6 py-4 whitespace-nowrap">${user._id || user.id}</td>
           <td class="px-6 py-4 whitespace-nowrap">${user.gameId}</td>
           <td class="px-6 py-4 whitespace-nowrap">${user.name}</td>
           <td class="px-6 py-4 whitespace-nowrap">${user.personality}</td>
           <td class="px-6 py-4 whitespace-nowrap">${new Date(user.timestamp).toLocaleString()}</td>
           <td class="px-6 py-4 whitespace-nowrap">
-            <button class="text-primary hover:text-primary/80 mr-3">
+            <button class="text-primary hover:text-primary/80 mr-3" onclick="editUser('${user._id || user.id}')">
               <i class="fa fa-edit"></i>
             </button>
-            <button class="text-red-500 hover:text-red-600">
+            <button class="text-red-500 hover:text-red-600" onclick="deleteUser('${user._id || user.id}')">
               <i class="fa fa-trash"></i>
             </button>
           </td>
@@ -381,6 +470,38 @@
       link.download = `ddnet-users-${new Date().toISOString().split('T')[0]}.json`;
       link.click();
       URL.revokeObjectURL(url);
+    }
+
+    // 删除用户
+    function deleteUser(userId) {
+      if (!confirm('确定要删除这个用户吗？此操作不可撤销。')) {
+        return;
+      }
+
+      fetch(API_BASE + '/api/users/' + userId, {
+        method: 'DELETE'
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('用户删除成功');
+          loadUsers();
+        } else {
+          alert('删除失败：' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('删除用户失败:', error);
+        alert('删除失败，请稍后重试');
+      });
+    }
+
+    // 编辑用户（目前仅显示信息，后续可扩展编辑功能）
+    function editUser(userId) {
+      const user = users.find(u => (u._id || u.id) === userId);
+      if (user) {
+        alert('用户信息：\n\n游戏ID：' + user.gameId + '\n用户名：' + user.name + '\n人格类型：' + user.personality + '\n提交时间：' + new Date(user.timestamp).toLocaleString());
+      }
     }
   </script>
 </body>
