@@ -1409,7 +1409,7 @@
           glowClass = 'shadow-lg shadow-purple-300';
         }
         
-        card.className = `relative p-4 rounded-xl border-2 ${colors.border} ${colors.bg} ${glowClass} cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg`;
+        card.className = `relative p-4 rounded-xl border-2 ${colors.border} ${colors.bg} ${glowClass} cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center justify-center min-h-[120px]`;
         card.onclick = () => showPersonalityDetail(personality, isUnlocked);
         
         if (isUnlocked) {
