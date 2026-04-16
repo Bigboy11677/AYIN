@@ -37,11 +37,12 @@ const User = mongoose.model('User', UserSchema);
 // 1. POST /api/users - 提交用户数据
 app.post('/api/users', async (req, res) => {
   try {
-    const { gameId, name, personality, avatarImage } = req.body;
+    let { gameId, name, personality, avatarImage } = req.body;
     
-    // 如果用户跳过了取名，不保存
+    // 如果用户没有提供 gameId，生成一个
     if (!gameId) {
-      return res.json({ success: false, message: '用户未提供游戏ID，跳过存储' });
+      gameId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      console.log('用户未提供游戏ID，生成随机ID:', gameId);
     }
     
     // 检查是否已存在相同数据，避免重复
