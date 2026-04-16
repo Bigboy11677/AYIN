@@ -1318,6 +1318,25 @@
       'rainbow': { bg: 'bg-gradient-to-r from-[rgb(239,68,68)] via-[rgb(234,179,8)] via-[rgb(16,185,129)] via-[rgb(59,130,246)] via-[rgb(124,58,237)] to-[rgb(236,72,153)]', border: 'border-white', text: 'text-white', glow: 'shadow-lg shadow-purple-300' }
     };
 
+    // 人格类型到默认头像的映射
+    const personalityAvatarMap = {
+      'Emotional Player': '拿刀.png',
+      'Hidden Personality': '彩虹.png',
+      'Challenge Avoider': 'ximi.png',
+      'Lying Flat Fish': '咸鱼.png',
+      'Rusher': '泡泡.png',
+      'Bald Grinder': '布偶.png',
+      'Balanced Player': '猫.png',
+      'Rational Thinker': '美西螈.png',
+      'Responsible Anchor': '石像.png',
+      'Self-Deprecating Humorist': '大dd.png',
+      'Confident Competitor': '漂亮.png',
+      'Carry Goat': '小狗.png',
+      'Friend Collector': '飞鼠.png',
+      'Team Supporter': '法师.png',
+      'Jokester': '狐狸.png'
+    };
+
     // 从本地存储获取已解锁的人格
     function getUnlockedPersonalities() {
       const saved = localStorage.getItem('unlockedPersonalities');
@@ -1972,9 +1991,15 @@
           }
           avatarHTML = `<div class="user-avatar" style="background-image: url('${avatarSrc}'); background-size: cover; background-position: center;"></div>`;
         } else {
-          // 没有头像，显示默认
-          const avatarChar = user.avatar ? String.fromCharCode(user.avatar) : '?';
-          avatarHTML = `<div class="user-avatar">${avatarChar}</div>`;
+          // 没有用户头像，使用人格对应的默认头像
+          const defaultAvatar = personalityAvatarMap[user.personality];
+          if (defaultAvatar) {
+            avatarHTML = `<div class="user-avatar" style="background-image: url('images/${defaultAvatar}'); background-size: cover; background-position: center;"></div>`;
+          } else {
+            // 如果也找不到默认头像，显示问号
+            const avatarChar = user.avatar ? String.fromCharCode(user.avatar) : '?';
+            avatarHTML = `<div class="user-avatar">${avatarChar}</div>`;
+          }
         }
         
         return `
@@ -2153,8 +2178,8 @@
             localStorage.setItem(cacheKey, JSON.stringify(data.data));
             localStorage.setItem(`${cacheKey}_time`, now.toString());
           } else {
-            console.log('从后端获取用户数据失败，使用本地测试数据');
-            // 保持本地测试数据作为备用
+            console.log('从后端获取用户数据失败，生成测试数据作为备用');
+            generateTestUsers();
           }
           stopIteration();
           currentUserIndex = 0;
@@ -2163,8 +2188,12 @@
         })
         .catch(error => {
           console.error('获取用户数据失败:', error);
-          // 后端API可能还未部署，使用本地测试数据作为备用
-          console.log('使用本地测试数据作为备用');
+          // 后端API可能还未部署，生成测试数据作为备用
+          console.log('生成测试数据作为备用');
+          generateTestUsers();
+          stopIteration();
+          currentUserIndex = 0;
+          renderSamePersonalityUsers();
           return testUsers;
         });
     }
@@ -2298,13 +2327,9 @@
     console.log('初始已解锁人格:', unlocked);
     checkAndUnlockPersonality();
     
-    // 生成测试用户数据
-    console.log('调用generateTestUsers函数');
-    generateTestUsers();
-    
-    // 立即渲染相同人格用户列表
-    console.log('调用renderSamePersonalityUsers函数');
-    renderSamePersonalityUsers();
+    // 直接从后端获取用户数据，不先生成测试数据
+    console.log('调用fetchUsersFromServer函数');
+    fetchUsersFromServer();
     
     renderCollectionGrid();
     handleGameIdModal();

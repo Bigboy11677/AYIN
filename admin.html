@@ -752,6 +752,8 @@
 
     // 清除指定日期范围的数据
     function clearRangeData() {
+      console.log('清除数据按钮被点击');
+      
       // 检查是否使用伪造密码
       const usingFakeData = localStorage.getItem('usingFakeData') === 'true';
       
@@ -762,6 +764,9 @@
       
       const beforeDate = document.getElementById('beforeDate').value;
       const afterDate = document.getElementById('afterDate').value;
+      
+      console.log('beforeDate:', beforeDate);
+      console.log('afterDate:', afterDate);
       
       if (!beforeDate && !afterDate) {
         alert('请至少选择一个日期');
@@ -784,15 +789,29 @@
       // 构建查询参数
       let url = API_BASE + '/api/users/range?';
       const params = [];
-      if (beforeDate) params.push(`beforeDate=${beforeDate}`);
-      if (afterDate) params.push(`afterDate=${afterDate}`);
+      if (beforeDate) {
+        // 添加时间部分，确保包含当天的所有时间
+        const beforeDateWithTime = beforeDate + 'T23:59:59';
+        params.push(`beforeDate=${encodeURIComponent(beforeDateWithTime)}`);
+      }
+      if (afterDate) {
+        // 添加时间部分，确保从当天的0点开始
+        const afterDateWithTime = afterDate + 'T00:00:00';
+        params.push(`afterDate=${encodeURIComponent(afterDateWithTime)}`);
+      }
       url += params.join('&');
+      
+      console.log('请求URL:', url);
 
       fetch(url, {
         method: 'DELETE'
       })
-      .then(response => response.json())
+      .then(response => {
+        console.log('响应状态:', response.status);
+        return response.json();
+      })
       .then(data => {
+        console.log('响应数据:', data);
         if (data.success) {
           alert(data.message);
           // 清空日期选择
@@ -800,12 +819,12 @@
           document.getElementById('afterDate').value = '';
           loadUsers();
         } else {
-          alert('清除失败：' + data.message);
+          alert('清除失败：' + (data.message || '未知错误'));
         }
       })
       .catch(error => {
         console.error('清除数据失败:', error);
-        alert('清除失败，请稍后重试');
+        alert('清除失败，请稍后重试。错误：' + error.message);
       });
     }
     

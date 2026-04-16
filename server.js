@@ -130,16 +130,24 @@ app.delete('/api/users/range', async (req, res) => {
   try {
     const { beforeDate, afterDate } = req.query;
     
+    console.log('删除数据请求 - beforeDate:', beforeDate, 'afterDate:', afterDate);
+    
     // 构建查询条件
     let query = {};
     
     if (beforeDate) {
-      query.timestamp = { ...query.timestamp, $lt: new Date(beforeDate) };
+      const before = new Date(beforeDate);
+      console.log('解析后的 beforeDate:', before);
+      query.timestamp = { ...query.timestamp, $lt: before };
     }
     
     if (afterDate) {
-      query.timestamp = { ...query.timestamp, $gt: new Date(afterDate) };
+      const after = new Date(afterDate);
+      console.log('解析后的 afterDate:', after);
+      query.timestamp = { ...query.timestamp, $gt: after };
     }
+    
+    console.log('查询条件:', query);
     
     // 如果没有日期条件，不执行删除
     if (!beforeDate && !afterDate) {
@@ -148,6 +156,8 @@ app.delete('/api/users/range', async (req, res) => {
     
     // 执行删除
     const result = await User.deleteMany(query);
+    
+    console.log('删除结果:', result);
     
     let message = '';
     if (beforeDate && afterDate) {
