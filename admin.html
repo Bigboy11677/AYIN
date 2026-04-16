@@ -229,6 +229,40 @@
     const pageSize = 10;
     let personalityTypes = [];
     let isLoggedIn = false;
+    
+    // 人格类型到头像的映射
+    const personalityAvatarMap = {
+      'Emotional Player': '拿刀.png',
+      'Hidden Personality': '彩虹.png',
+      'Challenge Avoider': 'ximi.png',
+      'Lying Flat Fish': '咸鱼.png',
+      'Rusher': '泡泡.png',
+      'Bald Grinder': '布偶.png',
+      'Balanced Player': '猫.png',
+      'Rational Thinker': '美西螈.png',
+      'Responsible Anchor': '石像.png',
+      'Self-Deprecating Humorist': '大dd.png',
+      'Confident Competitor': '漂亮.png',
+      'Carry Goat': '小狗.png',
+      'Friend Collector': '飞鼠.png',
+      'Team Supporter': '法师.png',
+      'Jokester': '狐狸.png',
+      '键盘粉碎者': '拿刀.png',
+      '收集狂': '彩虹.png',
+      '摆烂仙人': 'ximi.png',
+      '躺平咸鱼': '咸鱼.png',
+      '偷跑Tee': '泡泡.png',
+      '独攀者': '布偶.png',
+      '中立者': '猫.png',
+      '策略大师': '美西螈.png',
+      '背锅侠': '石像.png',
+      '小丑竟是我': '大dd.png',
+      '装杯带师': '漂亮.png',
+      '带飞者': '小狗.png',
+      '扩列狂魔': '飞鼠.png',
+      '团队依赖户': '法师.png',
+      '整活艺术家': '狐狸.png'
+    };
 
     // 初始化
     document.addEventListener('DOMContentLoaded', function() {
@@ -538,11 +572,22 @@
             </div>
           `;
         } else {
-          avatarHtml = `
-            <div class="w-16 h-16 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
-              <i class="fa fa-user-circle text-4xl text-gray-400"></i>
-            </div>
-          `;
+          // 没有头像时，使用人格类型对应的默认头像
+          const defaultAvatar = personalityAvatarMap[user.personality] || '';
+          if (defaultAvatar) {
+            avatarHtml = `
+              <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 flex items-center justify-center">
+                <img src="images/${defaultAvatar}" alt="头像" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML='&lt;i class=\'fa fa-user-circle text-4xl text-gray-400\'&gt;&lt;/i&gt;'">
+              </div>
+            `;
+          } else {
+            // 如果也找不到默认头像，显示图标
+            avatarHtml = `
+              <div class="w-16 h-16 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+                <i class="fa fa-user-circle text-4xl text-gray-400"></i>
+              </div>
+            `;
+          }
         }
         
         return `

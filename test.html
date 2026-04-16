@@ -1267,9 +1267,81 @@
       }
     }
 
+    // 提交用户数据到后端
+    function submitUserData(personalityType) {
+      const gameId = localStorage.getItem('gameId');
+      const hasShownModal = localStorage.getItem('hasShownGameIdModal');
+      
+      // 如果用户跳过了取名，不提交数据
+      if (!gameId && hasShownModal) {
+        console.log('用户跳过了取名，不提交数据');
+        return;
+      }
+      
+      // 构建用户数据
+      const avatarData = localStorage.getItem('userAvatar');
+      let avatarImage = '';
+      if (avatarData) {
+        try {
+          const parsedAvatar = JSON.parse(avatarData);
+          // 保存预设头像的文件名或压缩后的自定义头像
+          if (parsedAvatar.type === 'preset') {
+            avatarImage = parsedAvatar.image;
+          } else if (parsedAvatar.type === 'custom') {
+            // 自定义头像已压缩，直接保存
+            avatarImage = parsedAvatar.image;
+          }
+        } catch (e) {
+          console.log('解析头像失败');
+        }
+      }
+      
+      const userData = {
+        gameId: gameId || '游客',
+        personality: personalityType,
+        name: gameId || '游客',
+        timestamp: new Date().toISOString(),
+        avatarImage: avatarImage
+      };
+      
+      console.log('准备提交用户数据:', userData);
+      
+      // 检查是否已提交过相同数据，避免重复提交
+      const submissionKey = `submission_${gameId}_${personalityType}`;
+      const lastSubmission = localStorage.getItem(submissionKey);
+      const now = Date.now();
+      
+      // 24小时内不重复提交相同数据
+      if (lastSubmission && (now - parseInt(lastSubmission)) < 24 * 60 * 60 * 1000) {
+        console.log('24小时内已提交过相同数据，跳过提交');
+        return;
+      }
+      
+      // 提交数据到后端
+      fetch('https://ayin-production.up.railway.app/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('数据提交成功:', data);
+        // 记录提交时间
+        localStorage.setItem(submissionKey, now.toString());
+      })
+      .catch(error => {
+        console.error('数据提交失败:', error);
+      });
+    }
+    
     // 显示结果
       function showResult() {
         if (result) {
+          // 立即提交数据到后端
+          submitUserData(result.type);
+          
           // 清除该人格的报告生成状态
           localStorage.removeItem('reportGenerated_' + result.type);
           

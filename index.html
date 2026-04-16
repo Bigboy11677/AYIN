@@ -1679,9 +1679,6 @@
           console.log('已保存测试历史');
         }
         
-        // 提交用户数据到后端
-        submitUserData(unlockedType);
-        
         // 移除URL参数
         window.history.replaceState({}, document.title, window.location.pathname);
       }
@@ -1693,77 +1690,6 @@
       const unlockBtn = document.getElementById('unlockAllBtn');
       if (resetBtn) resetBtn.classList.remove('hidden');
       if (unlockBtn) unlockBtn.classList.remove('hidden');
-    }
-    
-    // 提交用户数据到后端
-    function submitUserData(personalityType) {
-      const gameId = localStorage.getItem('gameId');
-      const hasShownModal = localStorage.getItem('hasShownGameIdModal');
-      
-      // 如果用户跳过了取名，不提交数据
-      if (!gameId && hasShownModal) {
-        console.log('用户跳过了取名，不提交数据');
-        return;
-      }
-      
-      // 构建用户数据
-      const avatarData = localStorage.getItem('userAvatar');
-      let avatarImage = '';
-      if (avatarData) {
-        try {
-          const parsedAvatar = JSON.parse(avatarData);
-          // 保存预设头像的文件名或压缩后的自定义头像
-          if (parsedAvatar.type === 'preset') {
-            avatarImage = parsedAvatar.image;
-          } else if (parsedAvatar.type === 'custom') {
-            // 自定义头像已压缩，直接保存
-            avatarImage = parsedAvatar.image;
-          }
-        } catch (e) {
-          console.log('解析头像失败');
-        }
-      }
-      
-      const userData = {
-        gameId: gameId || '游客',
-        personality: personalityType,
-        name: gameId || '游客',
-        timestamp: new Date().toISOString(),
-        avatarImage: avatarImage
-      };
-      
-      console.log('准备提交用户数据:', userData);
-      
-      // 检查是否已提交过相同数据，避免重复提交
-      const submissionKey = `submission_${gameId}_${personalityType}`;
-      const lastSubmission = localStorage.getItem(submissionKey);
-      const now = Date.now();
-      
-      // 24小时内不重复提交相同数据
-      if (lastSubmission && (now - parseInt(lastSubmission)) < 24 * 60 * 60 * 1000) {
-        console.log('24小时内已提交过相同数据，跳过提交');
-        return;
-      }
-      
-      // 提交数据到后端
-      fetch(API_BASE + '/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(userData)
-      })
-      .then(response => response.json())
-      .then(data => {
-        console.log('数据提交成功:', data);
-        // 记录提交时间
-        localStorage.setItem(submissionKey, now.toString());
-      })
-      .catch(error => {
-        console.error('数据提交失败:', error);
-        // 后端API可能还未部署，使用本地测试数据作为备用
-        console.log('使用本地测试数据作为备用');
-      });
     }
     
     // 检查是否应该显示管理员按钮
