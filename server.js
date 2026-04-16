@@ -303,7 +303,7 @@ app.delete('/api/users/all', async (req, res) => {
     console.error('错误消息:', error.message);
     res.json({ 
       success: false, 
-      message: `清除失败: ' + error.message, 
+      message: '清除失败: ' + error.message, 
       error: error.message 
     });
   }
