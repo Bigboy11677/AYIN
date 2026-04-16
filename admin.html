@@ -297,39 +297,61 @@
         <tr>
           <td colspan="6" class="px-6 py-12 text-center text-gray-500">
             <i class="fa fa-spinner fa-spin text-2xl mb-4 block"></i>
-            <p>加载中...</p>
+            <p>正在从数据库加载...</p>
+            <p class="text-sm mt-2" id="loadingStatus">连接服务器中...</p>
           </td>
         </tr>
       `;
       
+      console.log('正在连接到:', API_BASE + '/api/users');
+      
       // 从后端API获取数据
       fetch(API_BASE + '/api/users')
-        .then(response => response.json())
+        .then(response => {
+          console.log('服务器响应状态:', response.status);
+          document.getElementById('loadingStatus').textContent = '服务器响应: ' + response.status;
+          return response.json();
+        })
         .then(data => {
+          console.log('返回的数据:', data);
           if (data.success && data.data) {
             users = data.data;
             filteredUsers = [...users];
             updatePersonalityTypes();
             updateStatistics();
             renderUsers();
+            console.log('成功加载真实用户数据:', users.length, '条');
           } else {
-            // 模拟数据，用于测试
-            users = generateMockData();
-            filteredUsers = [...users];
-            updatePersonalityTypes();
-            updateStatistics();
-            renderUsers();
+            console.log('API返回数据格式不对，使用模拟数据');
+            loadMockData();
           }
         })
         .catch(error => {
           console.error('获取用户数据失败:', error);
-          // 生成模拟数据用于测试
-          users = generateMockData();
-          filteredUsers = [...users];
-          updatePersonalityTypes();
-          updateStatistics();
-          renderUsers();
+          document.getElementById('loadingStatus').textContent = '连接失败: ' + error.message;
+          
+          // 显示错误信息，等待3秒后再显示模拟数据
+          setTimeout(() => {
+            loadMockData();
+          }, 2000);
         });
+    }
+
+    // 加载模拟数据（用于演示）
+    function loadMockData() {
+      console.log('加载模拟数据');
+      users = generateMockData();
+      filteredUsers = [...users];
+      updatePersonalityTypes();
+      updateStatistics();
+      renderUsers();
+      
+      // 在页面顶部显示提示信息
+      const mainContent = document.getElementById('adminContent');
+      const warningDiv = document.createElement('div');
+      warningDiv.className = 'bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded mb-4';
+      warningDiv.innerHTML = '<strong><i class="fa fa-warning mr-2"></i>注意：</strong> 当前显示的是模拟数据。请确认后端服务器是否正常运行，且 API 地址配置正确。';
+      mainContent.insertBefore(warningDiv, mainContent.firstChild);
     }
 
     // 生成模拟数据
@@ -411,23 +433,26 @@
         return;
       }
       
-      tableBody.innerHTML = pageUsers.map(user => `
+      tableBody.innerHTML = pageUsers.map((user, index) => {
+        const userId = user._id || user.id;
+        return `
         <tr>
-          <td class="px-6 py-4 whitespace-nowrap">${user._id || user.id}</td>
+          <td class="px-6 py-4 whitespace-nowrap">${userId}</td>
           <td class="px-6 py-4 whitespace-nowrap">${user.gameId}</td>
           <td class="px-6 py-4 whitespace-nowrap">${user.name}</td>
           <td class="px-6 py-4 whitespace-nowrap">${user.personality}</td>
           <td class="px-6 py-4 whitespace-nowrap">${new Date(user.timestamp).toLocaleString()}</td>
           <td class="px-6 py-4 whitespace-nowrap">
-            <button class="text-primary hover:text-primary/80 mr-3" onclick="editUser('${user._id || user.id}')">
+            <button class="text-primary hover:text-primary/80 mr-3" data-index="${startIndex + index}" onclick="editUserFromIndex(${startIndex + index})">
               <i class="fa fa-edit"></i>
             </button>
-            <button class="text-red-500 hover:text-red-600" onclick="deleteUser('${user._id || user.id}')">
+            <button class="text-red-500 hover:text-red-600" data-index="${startIndex + index}" onclick="deleteUserFromIndex(${startIndex + index})">
               <i class="fa fa-trash"></i>
             </button>
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
       
       // 更新分页信息
       document.getElementById('showingFrom').textContent = startIndex + 1;
@@ -472,9 +497,71 @@
       URL.revokeObjectURL(url);
     }
 
-    // 删除用户
-    function deleteUser(userId) {
+    // 通过索引删除用户（更安全）
+    function deleteUserFromIndex(index) {
+      const user = filteredUsers[index];
+      if (!user) return;
+      
+      const userId = user._id || user.id;
+      
       if (!confirm('确定要删除这个用户吗？此操作不可撤销。')) {
+        return;
+      }
+
+      // 如果是模拟数据（没有_id），只从本地移除
+      if (!user._id) {
+        users = users.filter(u => (u._id || u.id) !== userId);
+        filteredUsers = filteredUsers.filter(u => (u._id || u.id) !== userId);
+        updatePersonalityTypes();
+        updateStatistics();
+        renderUsers();
+        alert('模拟数据已删除');
+        return;
+      }
+
+      fetch(API_BASE + '/api/users/' + userId, {
+        method: 'DELETE'
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('用户删除成功');
+          loadUsers();
+        } else {
+          alert('删除失败：' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('删除用户失败:', error);
+        alert('删除失败，请稍后重试');
+      });
+    }
+
+    // 通过索引编辑用户（更安全）
+    function editUserFromIndex(index) {
+      const user = filteredUsers[index];
+      if (user) {
+        alert('用户信息：\n\n游戏ID：' + user.gameId + '\n用户名：' + user.name + '\n人格类型：' + user.personality + '\n提交时间：' + new Date(user.timestamp).toLocaleString());
+      }
+    }
+
+    // 删除用户（保留原来的函数作为备份）
+    function deleteUser(userId) {
+      const user = users.find(u => (u._id || u.id) == userId);
+      if (!user) return;
+      
+      if (!confirm('确定要删除这个用户吗？此操作不可撤销。')) {
+        return;
+      }
+
+      // 如果是模拟数据（没有_id），只从本地移除
+      if (!user._id) {
+        users = users.filter(u => (u._id || u.id) != userId);
+        filteredUsers = filteredUsers.filter(u => (u._id || u.id) != userId);
+        updatePersonalityTypes();
+        updateStatistics();
+        renderUsers();
+        alert('模拟数据已删除');
         return;
       }
 
@@ -498,7 +585,7 @@
 
     // 编辑用户（目前仅显示信息，后续可扩展编辑功能）
     function editUser(userId) {
-      const user = users.find(u => (u._id || u.id) === userId);
+      const user = users.find(u => (u._id || u.id) == userId);
       if (user) {
         alert('用户信息：\n\n游戏ID：' + user.gameId + '\n用户名：' + user.name + '\n人格类型：' + user.personality + '\n提交时间：' + new Date(user.timestamp).toLocaleString());
       }

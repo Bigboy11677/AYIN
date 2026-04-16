@@ -12,7 +12,7 @@
       background-position: center;
       background-repeat: no-repeat;
     }
-    
+
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -23,18 +23,34 @@
         transform: translateY(0);
       }
     }
-    
+
     .animate-fade-in-up {
       animation: fadeInUp 0.6s ease-out forwards;
     }
-    
+
+    @keyframes fadeInRight {
+      from {
+        opacity: 0;
+        transform: translateX(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .animate-fade-in-right {
+      animation: fadeInRight 0.5s ease-out forwards;
+      opacity: 0;
+    }
+
     .image-container {
       opacity: 0;
       display: flex;
       justify-content: center;
       align-items: center;
     }
-    
+
     /* 响应式设计 */
     @media (max-width: 768px) {
       /* 头部导航调整 */
@@ -42,7 +58,7 @@
         position: relative;
         z-index: 10;
       }
-      
+
       header a {
         font-size: 0.8rem;
         padding: 0.4rem 0.8rem;
@@ -51,13 +67,13 @@
         right: 1rem;
         z-index: 20;
       }
-      
+
       /* 图片容器调整 */
       .w-full.max-w-4xl {
         max-width: 100%;
         position: relative;
       }
-      
+
       .image-container {
         width: 100%;
         min-height: 80vh;
@@ -65,27 +81,36 @@
         justify-content: center;
         align-items: center;
       }
-      
+
       /* 图片调整 */
       #personalityImage {
         max-width: 100%;
         max-height: 80vh;
         object-fit: contain;
       }
+
+      /* 移动端 - 按钮放在图片上方 */
+      .back-button {
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        transform: none !important;
+        margin-bottom: 2rem;
+      }
     }
-    
+
     @media (max-width: 480px) {
       /* 更小屏幕的调整 */
       header a {
         font-size: 0.7rem;
         padding: 0.3rem 0.6rem;
       }
-      
+
       /* 图片调整 */
       #personalityImage {
         max-height: 70vh;
       }
-      
+
       .image-container {
         min-height: 70vh;
       }
@@ -94,20 +119,18 @@
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
   <!-- 图片容器 -->
-  <div class="w-full max-w-4xl flex flex-col items-center justify-start pt-8 relative">
-    <!-- 头部导航 -->
-    <header class="w-full max-w-4xl mb-6 flex justify-end items-center">
-      <a href="javascript:history.back()" class="flex items-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 transform hover:scale-105">
-        <i class="fa fa-arrow-left text-xl"></i>
-        <span class="font-semibold text-lg">返回结果</span>
-      </a>
-    </header>
-    
+  <div class="w-full max-w-4xl flex items-center justify-center pt-8 relative">
+    <!-- 返回按钮 - 在图片右边，垂直居中 -->
+    <a href="javascript:history.back()" class="animate-fade-in-right flex items-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 absolute right-0 top-1/2 -translate-y-1/2" style="margin-right: -6rem; animation-delay: 1s;">
+      <i class="fa fa-arrow-left text-xl"></i>
+      <span class="font-semibold text-lg">返回结果</span>
+    </a>
+
     <div class="image-container animate-fade-in-up" style="animation-delay: 0.4s;">
       <img id="personalityImage" src="" alt="人格报告" class="max-w-full max-h-[80vh] object-contain rounded-lg">
     </div>
   </div>
-  
+
   <!-- 交互JS -->
   <script>
     // 人格名称到背景图片的映射
@@ -127,13 +150,13 @@
       '摆烂仙人': '10.png',                  // 摆烂仙人
       '键盘粉碎者': '18.png'                 // 键盘粉碎者
     };
-    
+
     // 从URL参数获取图片路径
     function getImagePath() {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get('image') || '';
     }
-    
+
     // 从图片路径中提取人格名称
     function getPersonalityNameFromImagePath(imagePath) {
       // 从图片路径中提取人格名称
@@ -144,20 +167,20 @@
       }
       return '';
     }
-    
+
     // 初始化页面
     function init() {
       const imagePath = getImagePath();
-      
+
       if (imagePath) {
         const imageEl = document.getElementById('personalityImage');
-        
+
         if (imageEl) {
           imageEl.src = imagePath;
-          
+
           // 从图片路径中提取人格名称
           const personalityName = getPersonalityNameFromImagePath(imagePath);
-          
+
           // 设置对应的背景图片
           if (personalityName) {
             const backgroundImage = personalityBackgroundMap[personalityName];
@@ -168,7 +191,7 @@
         }
       }
     }
-    
+
     // 页面加载完成后初始化
     window.addEventListener('DOMContentLoaded', init);
   </script>
