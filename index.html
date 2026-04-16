@@ -1726,7 +1726,7 @@
       
       // 提交数据到后端
       // ⚠️ 部署后需要将API地址改成你的实际后端地址
-      const API_BASE = ''; // 留空则使用相对路径，本地开发时使用；部署后填写如 'https://ddnet-backend.up.railway.app'
+      const API_BASE = 'https://ayin-production.up.railway.app'; // 后端API地址
       // GitHub Pages部署时填写：'https://你的用户名.github.io/仓库名'
       fetch(API_BASE + '/api/users', {
         method: 'POST',
@@ -2171,7 +2171,7 @@
       
       // 从后端获取相同人格的用户数据
       // ⚠️ 部署后需要将API地址改成你的实际后端地址
-      const API_BASE = ''; // 留空则使用相对路径，本地开发时使用；部署后填写如 'https://ddnet-backend.up.railway.app'
+      const API_BASE = 'https://ayin-production.up.railway.app'; // 后端API地址
       // GitHub Pages部署时填写：'https://你的用户名.github.io/仓库名'
       return fetch(API_BASE + `/api/users/same-personality?personality=${encodeURIComponent(currentPersonality)}&limit=50`)
         .then(response => response.json())
