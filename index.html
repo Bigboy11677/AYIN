@@ -1046,7 +1046,7 @@
       <div class="max-w-3xl w-full mb-12">
         <div class="bg-white bg-opacity-90 rounded-2xl p-6 sm:p-8 card-shadow">
           <h2 class="text-2xl font-bold text-primary mb-6">
-            <i class="fa fa-users mr-2"></i><span id="samePersonalityTitle"></span>相同人格用户</span>
+            <i class="fa fa-users mr-2"></i><span id="samePersonalityTitle">相同人格用户</span>
           </h2>
           <div id="samePersonalityUsers" class="grid grid-cols-5 gap-2 w-full">
             <!-- 相同人格用户将在这里动态渲染 -->
@@ -2105,6 +2105,9 @@
       const allUsers = testUsers;
       const currentPersonality = getCurrentDisplayPersonality();
       
+      console.log('renderSamePersonalityUsers - 当前人格:', currentPersonality);
+      console.log('renderSamePersonalityUsers - 所有用户数量:', allUsers.length);
+      
       // 更新标题显示当前人格名称
       const titleEl = document.getElementById('samePersonalityTitle');
       if (titleEl) {
@@ -2114,11 +2117,17 @@
       
       // 首次加载时从后端获取数据
       if (testUsers.length === 0) {
-        fetchUsersFromServer();
+        console.log('没有用户数据，从服务器获取...');
+        fetchUsersFromServer().then(() => {
+          console.log('获取完成后重新渲染...');
+          renderSamePersonalityUsers();
+        });
         return;
       }
       
       let samePersonalityUsers = allUsers.filter(user => user.personality === currentPersonality);
+      console.log('renderSamePersonalityUsers - 相同人格用户数量:', samePersonalityUsers.length);
+      console.log('renderSamePersonalityUsers - 所有用户人格类型:', allUsers.map(u => u.personality));
       
       if (samePersonalityUsers.length === 0) {
         const personalityName = getPersonalityName(currentPersonality);
@@ -2316,12 +2325,13 @@
       
       console.log('获取相同人格用户，人格类型:', currentPersonality, '强制刷新:', forceRefresh);
       
+      const cacheKey = `users_${currentPersonality}`;
+      const now = Date.now();
+      
       // 检查本地缓存（如果不是强制刷新）
       if (!forceRefresh) {
-        const cacheKey = `users_${currentPersonality}`;
         const cachedData = localStorage.getItem(cacheKey);
         const cacheTime = localStorage.getItem(`${cacheKey}_time`);
-        const now = Date.now();
         
         // 缓存有效期缩短到1分钟
         if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 1 * 60 * 1000) {
