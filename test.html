@@ -1268,7 +1268,7 @@
     }
 
     // 提交用户数据到后端
-    function submitUserData(personalityType) {
+    async function submitUserData(personalityType) {
       const gameId = localStorage.getItem('gameId');
       const hasShownModal = localStorage.getItem('hasShownGameIdModal');
       
@@ -1317,30 +1317,30 @@
         return;
       }
       
-      // 提交数据到后端
-      fetch('https://ayin-production.up.railway.app/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(userData)
-      })
-      .then(response => response.json())
-      .then(data => {
+      try {
+        // 提交数据到后端
+        const response = await fetch('https://ayin-production.up.railway.app/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(userData)
+        });
+        
+        const data = await response.json();
         console.log('数据提交成功:', data);
         // 记录提交时间
         localStorage.setItem(submissionKey, now.toString());
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('数据提交失败:', error);
-      });
+      }
     }
     
     // 显示结果
-      function showResult() {
+      async function showResult() {
         if (result) {
-          // 立即提交数据到后端
-          submitUserData(result.type);
+          // 立即提交数据到后端，等待完成
+          await submitUserData(result.type);
           
           // 清除该人格的报告生成状态
           localStorage.removeItem('reportGenerated_' + result.type);
