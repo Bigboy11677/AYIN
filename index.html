@@ -1045,9 +1045,14 @@
       <!-- 相同人格用户模块 -->
       <div class="max-w-3xl w-full mb-12">
         <div class="bg-white bg-opacity-90 rounded-2xl p-6 sm:p-8 card-shadow">
-          <h2 class="text-2xl font-bold text-primary text-center mb-6">
-            <i class="fa fa-users mr-2"></i>相同人格用户
-          </h2>
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-primary">
+              <i class="fa fa-users mr-2"></i>相同人格用户
+            </h2>
+            <button id="refreshUsersBtn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+              <i class="fa fa-refresh mr-2"></i>刷新
+            </button>
+          </div>
           <div id="samePersonalityUsers" class="grid grid-cols-5 gap-2 w-full">
             <!-- 相同人格用户将在这里动态渲染 -->
           </div>
@@ -2140,7 +2145,7 @@
     // 只需将 testUsers 赋值为服务器返回的数组，其余遍历/动画逻辑无需改动。
     // 数据量 > 10 时会自动分批滚动遍历；≤ 10 时直接展示全部。
     // ——————————————————————————————————————————————————
-    function fetchUsersFromServer() {
+    function fetchUsersFromServer(forceRefresh = false) {
       const history = getTestHistory();
       let currentPersonality = 'Emotional Player'; // 默认人格
       
@@ -2148,20 +2153,24 @@
         currentPersonality = history[0].type;
       }
       
-      // 检查本地缓存
-      const cacheKey = `users_${currentPersonality}`;
-      const cachedData = localStorage.getItem(cacheKey);
-      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
-      const now = Date.now();
+      console.log('获取相同人格用户，人格类型:', currentPersonality, '强制刷新:', forceRefresh);
       
-      // 缓存有效期10分钟
-      if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 10 * 60 * 1000) {
-        console.log('使用本地缓存的用户数据');
-        testUsers = JSON.parse(cachedData);
-        stopIteration();
-        currentUserIndex = 0;
-        renderSamePersonalityUsers();
-        return Promise.resolve(testUsers);
+      // 检查本地缓存（如果不是强制刷新）
+      if (!forceRefresh) {
+        const cacheKey = `users_${currentPersonality}`;
+        const cachedData = localStorage.getItem(cacheKey);
+        const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+        const now = Date.now();
+        
+        // 缓存有效期缩短到1分钟
+        if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 1 * 60 * 1000) {
+          console.log('使用本地缓存的用户数据');
+          testUsers = JSON.parse(cachedData);
+          stopIteration();
+          currentUserIndex = 0;
+          renderSamePersonalityUsers();
+          return Promise.resolve(testUsers);
+        }
       }
       
       // 从后端获取相同人格的用户数据
@@ -2330,6 +2339,15 @@
     // 直接从后端获取用户数据，不先生成测试数据
     console.log('调用fetchUsersFromServer函数');
     fetchUsersFromServer();
+    
+    // 刷新按钮事件
+    const refreshUsersBtn = document.getElementById('refreshUsersBtn');
+    if (refreshUsersBtn) {
+      refreshUsersBtn.addEventListener('click', function() {
+        console.log('用户点击刷新按钮，强制刷新相同人格用户数据');
+        fetchUsersFromServer(true);
+      });
+    }
     
     renderCollectionGrid();
     handleGameIdModal();
