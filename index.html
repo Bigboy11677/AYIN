@@ -1179,6 +1179,9 @@
 
   <!-- 交互JS -->
   <script>
+    // 全局变量
+    const API_BASE = 'https://ayin-production.up.railway.app'; // 后端API地址
+    
     // 人格数据
     const personalities = [
       { 
@@ -1704,11 +1707,29 @@
       }
       
       // 构建用户数据
+      const avatarData = localStorage.getItem('userAvatar');
+      let avatarImage = '';
+      if (avatarData) {
+        try {
+          const parsedAvatar = JSON.parse(avatarData);
+          // 保存预设头像的文件名或压缩后的自定义头像
+          if (parsedAvatar.type === 'preset') {
+            avatarImage = parsedAvatar.image;
+          } else if (parsedAvatar.type === 'custom') {
+            // 自定义头像已压缩，直接保存
+            avatarImage = parsedAvatar.image;
+          }
+        } catch (e) {
+          console.log('解析头像失败');
+        }
+      }
+      
       const userData = {
         gameId: gameId || '游客',
         personality: personalityType,
         name: gameId || '游客',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        avatarImage: avatarImage
       };
       
       console.log('准备提交用户数据:', userData);
@@ -1725,9 +1746,6 @@
       }
       
       // 提交数据到后端
-      // ⚠️ 部署后需要将API地址改成你的实际后端地址
-      const API_BASE = 'https://ayin-production.up.railway.app'; // 后端API地址
-      // GitHub Pages部署时填写：'https://你的用户名.github.io/仓库名'
       fetch(API_BASE + '/api/users', {
         method: 'POST',
         headers: {
@@ -1826,24 +1844,57 @@
         });
       });
       
-      // 自定义头像上传
-      avatarFileInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
+      // 压缩头像图片
+      function compressAvatarImage(file, maxWidth = 256, maxHeight = 256, quality = 0.7) {
+        return new Promise((resolve) => {
           const reader = new FileReader();
           reader.onload = function(e) {
-            // 移除背景渐变，显示自定义头像
-            profileAvatar.style.background = 'none';
-            profileAvatar.innerHTML = `<img src="${e.target.result}" alt="自定义头像" class="w-full h-full object-cover rounded-full">`;
-            profileAvatarText.style.display = 'none';
-            
-            // 保存到本地存储
-            localStorage.setItem('userAvatar', JSON.stringify({ type: 'custom', image: e.target.result }));
-            
-            // 更新主页面头像
-            updateMainAvatar();
+            const img = new Image();
+            img.onload = function() {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              
+              // 计算缩放比例
+              if (width > maxWidth || height > maxHeight) {
+                const ratio = Math.min(maxWidth / width, maxHeight / height);
+                width = width * ratio;
+                height = height * ratio;
+              }
+              
+              canvas.width = width;
+              canvas.height = height;
+              
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              
+              // 转换为JPEG格式（更小）
+              const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+              resolve(compressedDataUrl);
+            };
+            img.src = e.target.result;
           };
           reader.readAsDataURL(file);
+        });
+      }
+      
+      // 自定义头像上传
+      avatarFileInput.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          // 压缩头像
+          const compressedDataUrl = await compressAvatarImage(file, 256, 256, 0.7);
+          
+          // 移除背景渐变，显示自定义头像
+          profileAvatar.style.background = 'none';
+          profileAvatar.innerHTML = `<img src="${compressedDataUrl}" alt="自定义头像" class="w-full h-full object-cover rounded-full">`;
+          profileAvatarText.style.display = 'none';
+          
+          // 保存到本地存储
+          localStorage.setItem('userAvatar', JSON.stringify({ type: 'custom', image: compressedDataUrl }));
+          
+          // 更新主页面头像
+          updateMainAvatar();
         }
       });
       
@@ -1981,30 +2032,23 @@
       
       usersContainer.innerHTML = usersToDisplay.map(user => {
         let avatarHTML = '';
-        const savedAvatar = localStorage.getItem('userAvatar');
-        if (savedAvatar) {
-          try {
-            const avatarData = JSON.parse(savedAvatar);
-            if (avatarData.type === 'preset') {
-              avatarHTML = `<div class="user-avatar" style="background-image: url('images/${avatarData.image}'); background-size: cover; background-position: center;"></div>`;
-            } else if (avatarData.type === 'custom') {
-              avatarHTML = `<div class="user-avatar" style="background-image: url('${avatarData.image}'); background-size: cover; background-position: center;"></div>`;
-            }
-          } catch (error) {
-            if (user.avatarImage) {
-              avatarHTML = `<div class="user-avatar" style="background-image: url('${user.avatarImage}'); background-size: cover; background-position: center;"></div>`;
-            } else {
-              const avatarChar = user.avatar ? String.fromCharCode(user.avatar) : '?';
-              avatarHTML = `<div class="user-avatar">${avatarChar}</div>`;
-            }
-          }
-        } else {
-          if (user.avatarImage) {
-            avatarHTML = `<div class="user-avatar" style="background-image: url('${user.avatarImage}'); background-size: cover; background-position: center;"></div>`;
+        
+        // 优先使用用户自己的头像
+        if (user.avatarImage) {
+          let avatarSrc = '';
+          // 判断是预设头像还是自定义头像
+          if (user.avatarImage.startsWith('data:')) {
+            // 自定义头像（data URL）
+            avatarSrc = user.avatarImage;
           } else {
-            const avatarChar = user.avatar ? String.fromCharCode(user.avatar) : '?';
-            avatarHTML = `<div class="user-avatar">${avatarChar}</div>`;
+            // 预设头像（文件名）
+            avatarSrc = `images/${user.avatarImage}`;
           }
+          avatarHTML = `<div class="user-avatar" style="background-image: url('${avatarSrc}'); background-size: cover; background-position: center;"></div>`;
+        } else {
+          // 没有头像，显示默认
+          const avatarChar = user.avatar ? String.fromCharCode(user.avatar) : '?';
+          avatarHTML = `<div class="user-avatar">${avatarChar}</div>`;
         }
         
         return `
@@ -2170,9 +2214,9 @@
       }
       
       // 从后端获取相同人格的用户数据
-      // ⚠️ 部署后需要将API地址改成你的实际后端地址
-      const API_BASE = 'https://ayin-production.up.railway.app'; // 后端API地址
-      // GitHub Pages部署时填写：'https://你的用户名.github.io/仓库名'
+
+
+
       return fetch(API_BASE + `/api/users/same-personality?personality=${encodeURIComponent(currentPersonality)}&limit=50`)
         .then(response => response.json())
         .then(data => {

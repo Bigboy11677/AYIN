@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API 测试</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-gray-50 p-8">
+  <div class="container mx-auto max-w-2xl">
+    <h1 class="text-3xl font-bold mb-8 text-center">后端 API 测试</h1>
+    
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">测试结果</h2>
+      <div id="testResults" class="space-y-4">
+        <div class="flex items-center gap-2 text-gray-500">
+          <i class="fa fa-spinner fa-spin"></i> 正在测试...
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-md p-6">
+      <h2 class="text-xl font-semibold mb-4">API 原始响应</h2>
+      <pre id="apiResponse" class="bg-gray-100 p-4 rounded-lg text-sm overflow-auto max-h-96"></pre>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'https://ayin-production.up.railway.app';
+    const resultsDiv = document.getElementById('testResults');
+    const responseDiv = document.getElementById('apiResponse');
+    
+    async function runTests() {
+      resultsDiv.innerHTML = '';
+      
+      // 测试 1: 健康检查
+      addResult('health', '健康检查 /api/health', false);
+      try {
+        const healthRes = await fetch(API_BASE + '/api/health');
+        const healthData = await healthRes.json();
+        addResult('health', '健康检查 /api/health', healthData.success, healthData);
+      } catch (e) {
+        addResult('health', '健康检查 /api/health', false, { error: e.message });
+      }
+      
+      // 测试 2: 获取用户数据
+      addResult('users', '获取用户 /api/users', false);
+      try {
+        const usersRes = await fetch(API_BASE + '/api/users');
+        const usersData = await usersRes.json();
+        addResult('users', '获取用户 /api/users', usersData.success, usersData);
+        
+        responseDiv.textContent = JSON.stringify(usersData, null, 2);
+      } catch (e) {
+        addResult('users', '获取用户 /api/users', false, { error: e.message });
+        responseDiv.textContent = '错误: ' + e.message;
+      }
+    }
+    
+    function addResult(id, name, pending, data) {
+      let existing = document.getElementById('result-' + id);
+      if (!existing) {
+        existing = document.createElement('div');
+        existing.id = 'result-' + id;
+        existing.className = 'flex items-center justify-between p-3 border rounded-lg';
+        resultsDiv.appendChild(existing);
+      }
+      
+      let statusIcon, statusClass;
+      if (pending === false) {
+        statusIcon = '<i class="fa fa-spinner fa-spin text-gray-400"></i>';
+        statusClass = 'text-gray-500';
+      } else if (pending) {
+        statusIcon = '<i class="fa fa-check-circle text-green-500"></i>';
+        statusClass = 'text-green-600';
+      } else {
+        statusIcon = '<i class="fa fa-times-circle text-red-500"></i>';
+        statusClass = 'text-red-600';
+      }
+      
+      existing.innerHTML = `
+        <span class="${statusClass}">${statusIcon} ${name}</span>
+        ${data ? `<button onclick="alert('${encodeURIComponent(JSON.stringify(data))}')" class="text-blue-500 hover:text-blue-600"><i class="fa fa-info-circle"></i></button>` : ''}
+      `;
+    }
+    
+    runTests();
+  </script>
+</body>
+</html>

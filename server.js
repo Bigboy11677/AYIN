@@ -125,7 +125,51 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
-// 5. GET /api/statistics - 获取统计数据
+// 5. DELETE /api/users/range - 删除指定日期范围的数据
+app.delete('/api/users/range', async (req, res) => {
+  try {
+    const { beforeDate, afterDate } = req.query;
+    
+    // 构建查询条件
+    let query = {};
+    
+    if (beforeDate) {
+      query.timestamp = { ...query.timestamp, $lt: new Date(beforeDate) };
+    }
+    
+    if (afterDate) {
+      query.timestamp = { ...query.timestamp, $gt: new Date(afterDate) };
+    }
+    
+    // 如果没有日期条件，不执行删除
+    if (!beforeDate && !afterDate) {
+      return res.json({ success: false, message: '请至少指定一个日期条件' });
+    }
+    
+    // 执行删除
+    const result = await User.deleteMany(query);
+    
+    let message = '';
+    if (beforeDate && afterDate) {
+      message = `成功删除 ${afterDate} 到 ${beforeDate} 之间的 ${result.deletedCount} 条数据`;
+    } else if (beforeDate) {
+      message = `成功删除 ${beforeDate} 之前的 ${result.deletedCount} 条数据`;
+    } else if (afterDate) {
+      message = `成功删除 ${afterDate} 之后的 ${result.deletedCount} 条数据`;
+    }
+    
+    res.json({ 
+      success: true, 
+      message: message,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('删除数据失败:', error);
+    res.json({ success: false, message: '删除失败', error: error.message });
+  }
+});
+
+// 6. GET /api/statistics - 获取统计数据
 app.get('/api/statistics', async (req, res) => {
   try {
     // 使用countDocuments而不是find().length，性能更好

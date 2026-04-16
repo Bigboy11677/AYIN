@@ -101,6 +101,37 @@
       </div>
     </div>
 
+    <!-- 日期范围清除 -->
+    <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+      <h3 class="text-lg font-semibold mb-4 text-gray-700">
+        <i class="fa fa-calendar mr-2"></i> 清除数据
+      </h3>
+      <div class="flex flex-col md:flex-row gap-4 items-end">
+        <div class="flex-1">
+          <label class="block text-gray-700 mb-2">删除日期前</label>
+          <input type="date" id="beforeDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+        </div>
+        <div class="flex-1">
+          <label class="block text-gray-700 mb-2">删除日期后</label>
+          <input type="date" id="afterDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+        </div>
+        <div class="flex gap-2">
+          <button id="clearRangeBtn" class="px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors">
+            <i class="fa fa-trash mr-2"></i> 清除数据
+          </button>
+          <button id="cancelClearBtn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400 transition-colors">
+            <i class="fa fa-times mr-2"></i> 取消
+          </button>
+        </div>
+      </div>
+      <p class="text-sm text-gray-500 mt-3">
+        <i class="fa fa-info-circle mr-1"></i>
+        只选"删除日期前"：删除该日期之前的所有数据；
+        只选"删除日期后"：删除该日期之后的所有数据；
+        两个都选：删除日期范围内的所有数据
+      </p>
+    </div>
+
     <!-- 筛选和搜索 -->
     <div class="bg-white rounded-xl shadow-md p-6 mb-8">
       <div class="flex flex-col md:flex-row gap-4">
@@ -135,8 +166,7 @@
           <thead class="bg-gray-100">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">游戏ID</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户名</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">头像/游戏ID</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">人格类型</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">提交时间</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
@@ -145,7 +175,7 @@
           <tbody id="userTableBody" class="bg-white divide-y divide-gray-200">
             <!-- 用户数据将通过JS动态添加 -->
             <tr>
-              <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+              <td colspan="5" class="px-6 py-12 text-center text-gray-500">
                 <i class="fa fa-spinner fa-spin text-2xl mb-4 block"></i>
                 <p>加载中...</p>
               </td>
@@ -175,7 +205,24 @@
   <script>
     // 全局变量
     const API_BASE = 'https://ayin-production.up.railway.app'; // 后端API地址
-    const ADMIN_PASSWORD = 'WZRwzr011205'; // 管理员密码（生产环境应从服务器获取）
+    const FAKE_PASSWORD = 'DD1314'; // 伪造的管理员密码（诱饵）
+    function getRealPassword() {
+      // 真实密码通过简单混淆
+      const _1 = 'W';
+      const _2 = 'Z';
+      const _3 = 'R';
+      const _4 = 'w';
+      const _5 = 'z';
+      const _6 = 'r';
+      const _7 = '0';
+      const _8 = '1';
+      const _9 = '1';
+      const _10 = '2';
+      const _11 = '0';
+      const _12 = '5';
+      return _1 + _2 + _3 + _4 + _5 + _6 + _7 + _8 + _9 + _10 + _11 + _12;
+    }
+    const ADMIN_PASSWORD = getRealPassword();
     let users = [];
     let filteredUsers = [];
     let currentPage = 1;
@@ -223,7 +270,13 @@
 
     // 登录验证
     function verifyLogin(password) {
-      if (password === ADMIN_PASSWORD) {
+      if (password === FAKE_PASSWORD) {
+        // 伪造密码：只显示模拟数据
+        localStorage.setItem('usingFakeData', 'true');
+        showAdminContent();
+      } else if (password === ADMIN_PASSWORD) {
+        // 真实密码：显示真实数据
+        localStorage.setItem('usingFakeData', 'false');
         showAdminContent();
       } else {
         document.getElementById('loginError').classList.remove('hidden');
@@ -256,6 +309,12 @@
 
       // 刷新按钮
       document.getElementById('refreshBtn').addEventListener('click', loadUsers);
+      
+      // 清除数据按钮
+      document.getElementById('clearRangeBtn').addEventListener('click', clearRangeData);
+      
+      // 取消清除按钮
+      document.getElementById('cancelClearBtn').addEventListener('click', cancelClearData);
       
       // 搜索按钮
       document.getElementById('searchBtn').addEventListener('click', searchUsers);
@@ -292,10 +351,20 @@
 
     // 加载用户数据
     function loadUsers() {
+      // 检查是否使用伪造密码
+      const usingFakeData = localStorage.getItem('usingFakeData') === 'true';
+      
+      if (usingFakeData) {
+        // 伪造密码：直接加载模拟数据
+        loadMockData();
+        return;
+      }
+      
+      // 真实密码：从后端API获取数据
       // 显示加载状态
       document.getElementById('userTableBody').innerHTML = `
         <tr>
-          <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+          <td colspan="5" class="px-6 py-12 text-center text-gray-500">
             <i class="fa fa-spinner fa-spin text-2xl mb-4 block"></i>
             <p>正在从数据库加载...</p>
             <p class="text-sm mt-2" id="loadingStatus">连接服务器中...</p>
@@ -303,18 +372,22 @@
         </tr>
       `;
       
+      console.log('API地址:', API_BASE);
       console.log('正在连接到:', API_BASE + '/api/users');
       
       // 从后端API获取数据
       fetch(API_BASE + '/api/users')
         .then(response => {
           console.log('服务器响应状态:', response.status);
-          document.getElementById('loadingStatus').textContent = '服务器响应: ' + response.status;
+          console.log('服务器响应状态文本:', response.statusText);
+          document.getElementById('loadingStatus').textContent = '服务器响应: ' + response.status + ' ' + response.statusText;
           return response.json();
         })
         .then(data => {
+          console.log('返回的数据类型:', typeof data);
           console.log('返回的数据:', data);
-          if (data.success && data.data) {
+          console.log('返回的数据JSON:', JSON.stringify(data, null, 2));
+          if (data && data.success && data.data) {
             users = data.data;
             filteredUsers = [...users];
             updatePersonalityTypes();
@@ -323,11 +396,14 @@
             console.log('成功加载真实用户数据:', users.length, '条');
           } else {
             console.log('API返回数据格式不对，使用模拟数据');
+            console.log('API返回的完整数据:', JSON.stringify(data, null, 2));
             loadMockData();
           }
         })
         .catch(error => {
           console.error('获取用户数据失败:', error);
+          console.error('错误详情:', error.message);
+          console.error('错误堆栈:', error.stack);
           document.getElementById('loadingStatus').textContent = '连接失败: ' + error.message;
           
           // 显示错误信息，等待3秒后再显示模拟数据
@@ -340,22 +416,29 @@
     // 加载模拟数据（用于演示）
     function loadMockData() {
       console.log('加载模拟数据');
-      users = generateMockData();
+      // 生成少量模拟数据，而不是50个
+      users = generateMockData(5); // 只生成5个模拟数据
       filteredUsers = [...users];
       updatePersonalityTypes();
       updateStatistics();
       renderUsers();
       
-      // 在页面顶部显示提示信息
-      const mainContent = document.getElementById('adminContent');
-      const warningDiv = document.createElement('div');
-      warningDiv.className = 'bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded mb-4';
-      warningDiv.innerHTML = '<strong><i class="fa fa-warning mr-2"></i>注意：</strong> 当前显示的是模拟数据。请确认后端服务器是否正常运行，且 API 地址配置正确。';
-      mainContent.insertBefore(warningDiv, mainContent.firstChild);
+      // 检查是否使用伪造密码
+      const usingFakeData = localStorage.getItem('usingFakeData') === 'true';
+      
+      // 只有在真实密码模式下才显示警告条
+      if (!usingFakeData) {
+        // 在页面顶部显示提示信息
+        const mainContent = document.getElementById('adminContent');
+        const warningDiv = document.createElement('div');
+        warningDiv.className = 'bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded mb-4';
+        warningDiv.innerHTML = '<strong><i class="fa fa-warning mr-2"></i>注意：</strong> 当前显示的是模拟数据。请确认后端服务器是否正常运行，且 API 地址配置正确。';
+        mainContent.insertBefore(warningDiv, mainContent.firstChild);
+      }
     }
 
     // 生成模拟数据
-    function generateMockData() {
+    function generateMockData(count = 5) {
       const personalities = [
         'Emotional Player', 'Hidden Personality', 'Challenge Avoider', 'Lying Flat Fish',
         'Rusher', 'Bald Grinder', 'Balanced Player', 'Rational Thinker',
@@ -364,7 +447,7 @@
       ];
       
       const mockUsers = [];
-      for (let i = 1; i <= 50; i++) {
+      for (let i = 1; i <= count; i++) {
         const personality = personalities[Math.floor(Math.random() * personalities.length)];
         const now = new Date();
         const randomDays = Math.floor(Math.random() * 30);
@@ -424,7 +507,7 @@
       if (pageUsers.length === 0) {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+            <td colspan="5" class="px-6 py-12 text-center text-gray-500">
               <i class="fa fa-info-circle text-2xl mb-4 block"></i>
               <p>暂无数据</p>
             </td>
@@ -435,11 +518,42 @@
       
       tableBody.innerHTML = pageUsers.map((user, index) => {
         const userId = user._id || user.id;
+        const avatarImage = user.avatarImage || '';
+        
+        // 判断是预设头像还是自定义头像（data URL）
+        let avatarHtml = '';
+        if (avatarImage) {
+          let avatarSrc = '';
+          // 如果是 data URL（自定义头像），直接使用
+          if (avatarImage.startsWith('data:')) {
+            avatarSrc = avatarImage;
+          } else {
+            // 如果是文件名（预设头像），加上路径
+            avatarSrc = `images/${avatarImage}`;
+          }
+          
+          avatarHtml = `
+            <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 flex items-center justify-center">
+              <img src="${avatarSrc}" alt="头像" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fa fa-user-circle text-4xl text-gray-400\'></i>'">
+            </div>
+          `;
+        } else {
+          avatarHtml = `
+            <div class="w-16 h-16 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+              <i class="fa fa-user-circle text-4xl text-gray-400"></i>
+            </div>
+          `;
+        }
+        
         return `
         <tr>
           <td class="px-6 py-4 whitespace-nowrap">${userId}</td>
-          <td class="px-6 py-4 whitespace-nowrap">${user.gameId}</td>
-          <td class="px-6 py-4 whitespace-nowrap">${user.name}</td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="flex flex-col items-center">
+              <div class="text-sm font-medium text-gray-800 mb-2">${user.gameId}</div>
+              ${avatarHtml}
+            </div>
+          </td>
           <td class="px-6 py-4 whitespace-nowrap">${user.personality}</td>
           <td class="px-6 py-4 whitespace-nowrap">${new Date(user.timestamp).toLocaleString()}</td>
           <td class="px-6 py-4 whitespace-nowrap">
@@ -541,7 +655,7 @@
     function editUserFromIndex(index) {
       const user = filteredUsers[index];
       if (user) {
-        alert('用户信息：\n\n游戏ID：' + user.gameId + '\n用户名：' + user.name + '\n人格类型：' + user.personality + '\n提交时间：' + new Date(user.timestamp).toLocaleString());
+        alert('用户信息：\n\n游戏ID：' + user.gameId + '\n人格类型：' + user.personality + '\n提交时间：' + new Date(user.timestamp).toLocaleString());
       }
     }
 
@@ -587,8 +701,73 @@
     function editUser(userId) {
       const user = users.find(u => (u._id || u.id) == userId);
       if (user) {
-        alert('用户信息：\n\n游戏ID：' + user.gameId + '\n用户名：' + user.name + '\n人格类型：' + user.personality + '\n提交时间：' + new Date(user.timestamp).toLocaleString());
+        alert('用户信息：\n\n游戏ID：' + user.gameId + '\n人格类型：' + user.personality + '\n提交时间：' + new Date(user.timestamp).toLocaleString());
       }
+    }
+
+    // 清除指定日期范围的数据
+    function clearRangeData() {
+      // 检查是否使用伪造密码
+      const usingFakeData = localStorage.getItem('usingFakeData') === 'true';
+      
+      if (usingFakeData) {
+        alert('演示模式下无法清除数据');
+        return;
+      }
+      
+      const beforeDate = document.getElementById('beforeDate').value;
+      const afterDate = document.getElementById('afterDate').value;
+      
+      if (!beforeDate && !afterDate) {
+        alert('请至少选择一个日期');
+        return;
+      }
+      
+      let message = '';
+      if (beforeDate && afterDate) {
+        message = `确定要删除 ${afterDate} 到 ${beforeDate} 之间的所有数据吗？此操作不可撤销！`;
+      } else if (beforeDate) {
+        message = `确定要删除 ${beforeDate} 之前的所有数据吗？此操作不可撤销！`;
+      } else if (afterDate) {
+        message = `确定要删除 ${afterDate} 之后的所有数据吗？此操作不可撤销！`;
+      }
+      
+      if (!confirm(message)) {
+        return;
+      }
+
+      // 构建查询参数
+      let url = API_BASE + '/api/users/range?';
+      const params = [];
+      if (beforeDate) params.push(`beforeDate=${beforeDate}`);
+      if (afterDate) params.push(`afterDate=${afterDate}`);
+      url += params.join('&');
+
+      fetch(url, {
+        method: 'DELETE'
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert(data.message);
+          // 清空日期选择
+          document.getElementById('beforeDate').value = '';
+          document.getElementById('afterDate').value = '';
+          loadUsers();
+        } else {
+          alert('清除失败：' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('清除数据失败:', error);
+        alert('清除失败，请稍后重试');
+      });
+    }
+    
+    // 取消清除数据
+    function cancelClearData() {
+      document.getElementById('beforeDate').value = '';
+      document.getElementById('afterDate').value = '';
     }
   </script>
 </body>
