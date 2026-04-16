@@ -1020,11 +1020,11 @@
         // 从URL参数获取答题内容
         const urlParams = new URLSearchParams(window.location.search);
         const answers = urlParams.get('answers');
-        // 带上unlocked参数和答题内容跳转到首页
+        // 带上unlocked参数、view参数（用于显示当前人格的用户）和答题内容跳转到首页
         if (answers) {
-          window.location.href = `index.html?unlocked=${encodeURIComponent(currentType)}&answers=${encodeURIComponent(answers)}`;
+          window.location.href = `index.html?unlocked=${encodeURIComponent(currentType)}&view=${encodeURIComponent(currentType)}&answers=${encodeURIComponent(answers)}`;
         } else {
-          window.location.href = `index.html?unlocked=${encodeURIComponent(currentType)}`;
+          window.location.href = `index.html?unlocked=${encodeURIComponent(currentType)}&view=${encodeURIComponent(currentType)}`;
         }
       } else {
         // 如果没有type参数，直接跳转到首页
@@ -1088,6 +1088,9 @@
       let type = urlParams.get('type') || 'Balanced Player';
       // 兼容旧 key（历史链接）
       if (type === 'Cautious Socializer') type = 'Lying Flat Fish';
+      
+      // 保存当前查看的人格到本地存储，让首页显示该人格的用户
+      localStorage.setItem('currentViewPersonality', type);
       
       // 加载结果
       currentType = type;
@@ -1286,6 +1289,9 @@
         
         if (result.success) {
           console.log('✅ 用户数据成功保存到服务器');
+          
+          // 保存当前查看的人格到本地存储
+          localStorage.setItem('currentViewPersonality', type);
           
           // 清除相关缓存，让首页能立即看到新数据
           const cacheKey = `users_${type}`;

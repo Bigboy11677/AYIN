@@ -1046,7 +1046,7 @@
       <div class="max-w-3xl w-full mb-12">
         <div class="bg-white bg-opacity-90 rounded-2xl p-6 sm:p-8 card-shadow">
           <h2 class="text-2xl font-bold text-primary mb-6">
-            <i class="fa fa-users mr-2"></i>相同人格用户
+            <i class="fa fa-users mr-2"></i><span id="samePersonalityTitle"></span>相同人格用户</span>
           </h2>
           <div id="samePersonalityUsers" class="grid grid-cols-5 gap-2 w-full">
             <!-- 相同人格用户将在这里动态渲染 -->
@@ -2069,13 +2069,48 @@
       updateMainAvatar();
     }
 
+    // 获取当前显示的人格类型
+    function getCurrentDisplayPersonality() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewPersonality = urlParams.get('view');
+      
+      if (viewPersonality) {
+        // 保存到本地存储
+        localStorage.setItem('currentViewPersonality', viewPersonality);
+        // 移除 URL 参数
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return viewPersonality;
+      }
+      
+      // 如果没有 URL 参数，检查本地存储的当前查看人格
+      const savedViewPersonality = localStorage.getItem('currentViewPersonality');
+      if (savedViewPersonality) {
+        return savedViewPersonality;
+      }
+      
+      // 否则使用测试历史中的人格或默认人格
+      const history = getTestHistory();
+      if (history.length > 0) {
+        return history[0].type;
+      }
+      
+      return 'Emotional Player'; // 默认人格
+    }
+
     // 渲染相同人格用户列表（支持迭代显示）
     function renderSamePersonalityUsers() {
       const usersContainer = document.getElementById('samePersonalityUsers');
       if (!usersContainer) return;
       
       const allUsers = testUsers;
-      const history = getTestHistory();
+      const currentPersonality = getCurrentDisplayPersonality();
+      
+      // 更新标题显示当前人格名称
+      const titleEl = document.getElementById('samePersonalityTitle');
+      if (titleEl) {
+        const personalityName = getPersonalityName(currentPersonality);
+        titleEl.textContent = `${personalityName}用户`;
+      }
       
       // 首次加载时从后端获取数据
       if (testUsers.length === 0) {
@@ -2083,19 +2118,14 @@
         return;
       }
       
-      let samePersonalityUsers = [];
-      if (history.length === 0) {
-        samePersonalityUsers = allUsers.filter(user => user.personality === 'Emotional Player');
-      } else {
-        const currentUserPersonality = history[0].type;
-        samePersonalityUsers = allUsers.filter(user => user.personality === currentUserPersonality);
-      }
+      let samePersonalityUsers = allUsers.filter(user => user.personality === currentPersonality);
       
       if (samePersonalityUsers.length === 0) {
+        const personalityName = getPersonalityName(currentPersonality);
         usersContainer.innerHTML = `
           <div class="text-center py-8 text-gray-500 col-span-5">
             <i class="fa fa-users text-4xl mb-4"></i>
-            <p>暂无与你具有相同人格的用户</p>
+            <p>暂无${personalityName}用户</p>
             <p class="mt-2">完成测试后，其他用户也完成测试时会显示在这里</p>
           </div>
         `;
@@ -2282,12 +2312,7 @@
     // 数据量 > 10 时会自动分批滚动遍历；≤ 10 时直接展示全部。
     // ——————————————————————————————————————————————————
     function fetchUsersFromServer(forceRefresh = false) {
-      const history = getTestHistory();
-      let currentPersonality = 'Emotional Player'; // 默认人格
-      
-      if (history.length > 0) {
-        currentPersonality = history[0].type;
-      }
+      let currentPersonality = getCurrentDisplayPersonality();
       
       console.log('获取相同人格用户，人格类型:', currentPersonality, '强制刷新:', forceRefresh);
       
