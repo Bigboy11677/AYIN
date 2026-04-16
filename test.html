@@ -1272,9 +1272,10 @@
       const gameId = localStorage.getItem('gameId');
       const hasShownModal = localStorage.getItem('hasShownGameIdModal');
       
-      // 如果用户跳过了取名，不提交数据
-      if (!gameId && hasShownModal) {
-        console.log('用户跳过了取名，不提交数据');
+      // 如果用户是游客（包括跳过取名或名字就是游客），不提交数据
+      const userName = gameId || '游客';
+      if (userName === '游客') {
+        console.log('用户是游客，不提交数据到数据库');
         return;
       }
       
@@ -1297,9 +1298,9 @@
       }
       
       const userData = {
-        gameId: gameId || '游客',
+        gameId: userName,
         personality: personalityType,
-        name: gameId || '游客',
+        name: userName,
         timestamp: new Date().toISOString(),
         avatarImage: avatarImage
       };
