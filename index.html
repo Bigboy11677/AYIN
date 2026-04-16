@@ -1045,14 +1045,9 @@
       <!-- 相同人格用户模块 -->
       <div class="max-w-3xl w-full mb-12">
         <div class="bg-white bg-opacity-90 rounded-2xl p-6 sm:p-8 card-shadow">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-2xl font-bold text-primary">
-              <i class="fa fa-users mr-2"></i>相同人格用户
-            </h2>
-            <button id="refreshUsersBtn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
-              <i class="fa fa-refresh mr-2"></i>刷新
-            </button>
-          </div>
+          <h2 class="text-2xl font-bold text-primary mb-6">
+            <i class="fa fa-users mr-2"></i>相同人格用户
+          </h2>
           <div id="samePersonalityUsers" class="grid grid-cols-5 gap-2 w-full">
             <!-- 相同人格用户将在这里动态渲染 -->
           </div>
@@ -2479,23 +2474,14 @@
     console.log('初始已解锁人格:', unlocked);
     checkAndUnlockPersonality();
     
-    // 直接从后端获取用户数据，不先生成测试数据
-    console.log('调用fetchUsersFromServer函数');
-    fetchUsersFromServer();
-    
-    // 刷新按钮事件
-    const refreshUsersBtn = document.getElementById('refreshUsersBtn');
-    if (refreshUsersBtn) {
-      refreshUsersBtn.addEventListener('click', function() {
-        console.log('用户点击刷新按钮，强制刷新相同人格用户数据');
-        fetchUsersFromServer(true);
-      });
-    }
-    
     renderCollectionGrid();
     handleGameIdModal();
     handleUserProfileModal();
     initAvatarSelection();
+    
+    // 页面加载时自动加载相同人格用户数据
+    console.log('页面初始化，开始加载相同人格用户数据');
+    fetchUsersFromServer();
   </script>
 
   <!-- 交流群模块 --> 
