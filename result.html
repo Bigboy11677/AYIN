@@ -579,6 +579,21 @@
   <!-- 交互JS -->
   <script>
 
+    // API 地址配置
+    const API_CONFIG = {
+      remote: 'https://ayin-production.up.railway.app',
+      local: 'http://localhost:3000'
+    };
+    
+    // 获取当前使用的 API 地址
+    function getApiBase() {
+      return localStorage.getItem('useLocalApi') === 'true' 
+        ? API_CONFIG.local 
+        : API_CONFIG.remote;
+    }
+    
+    // 全局变量
+    let API_BASE = getApiBase(); // 后端API地址
 
     // DDnet类型数据（基于七个角度）
     const ddnetTypes = {
@@ -1214,41 +1229,80 @@
       initReportGeneration();
     }
 
-    // 保存用户人格数据到本地存储
-    function saveUserPersonalityData(type) {
+    // 保存用户人格数据到本地存储和后端服务器
+    async function saveUserPersonalityData(type) {
       // 获取用户的游戏ID
       const gameId = localStorage.getItem('gameId') || '';
       
-      // 生成随机用户名
+      // 获取用户头像
+      let avatarImage = '';
+      try {
+        const savedAvatar = localStorage.getItem('userAvatar');
+        if (savedAvatar) {
+          const avatarData = JSON.parse(savedAvatar);
+          if (avatarData.type === 'preset') {
+            avatarImage = avatarData.image;
+          } else if (avatarData.type === 'custom') {
+            avatarImage = avatarData.image;
+          }
+        }
+      } catch (e) {
+        console.log('获取头像失败:', e);
+      }
+      
+      // 生成用户名
       const randomNames = ['快乐的Tee', '勇敢的Runner', '聪明的Strategist', '幽默的Joker', '可靠的Supporter', '自信的Challenger', '冷静的Thinker', '独立的Grinder', '友善的Collector', '机智的Anchor'];
-      const randomName = randomNames[Math.floor(Math.random() * randomNames.length)] + Math.floor(Math.random() * 1000);
+      const userName = gameId || randomNames[Math.floor(Math.random() * randomNames.length)] + Math.floor(Math.random() * 1000);
       
       // 创建用户数据对象
       const userData = {
-        id: Date.now(),
-        name: randomName,
         gameId: gameId,
+        name: userName,
         personality: type,
-        timestamp: new Date().toISOString(),
-        avatar: Math.floor(Math.random() * 26) + 65 // 生成A-Z的ASCII码
+        avatarImage: avatarImage,
+        timestamp: new Date().toISOString()
       };
       
-      // 从本地存储获取现有用户数据
+      console.log('准备提交用户数据到服务器:', userData);
+      
+      // 先保存到本地存储（作为备份）
       const existingUsers = JSON.parse(localStorage.getItem('personalityUsers') || '[]');
-      
-      // 添加新用户数据
-      existingUsers.push(userData);
-      
-      // 限制用户数据数量，只保留最近100个
+      existingUsers.push({ ...userData, id: Date.now() });
       const limitedUsers = existingUsers.slice(-100);
-      
-      // 保存回本地存储
       localStorage.setItem('personalityUsers', JSON.stringify(limitedUsers));
-      console.log('User personality data saved:', userData);
+      
+      // 提交到后端服务器
+      try {
+        const response = await fetch(API_BASE + '/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(userData)
+        });
+        
+        const result = await response.json();
+        console.log('用户数据提交结果:', result);
+        
+        if (result.success) {
+          console.log('✅ 用户数据成功保存到服务器');
+          
+          // 清除相关缓存，让首页能立即看到新数据
+          const cacheKey = `users_${type}`;
+          localStorage.removeItem(cacheKey);
+          localStorage.removeItem(`${cacheKey}_time`);
+          console.log('已清除缓存，首页将刷新数据');
+        } else {
+          console.log('⚠️ 服务器返回失败:', result.message);
+        }
+      } catch (error) {
+        console.error('❌ 提交用户数据到服务器失败:', error);
+        console.log('用户数据已保存到本地，稍后可以重试');
+      }
     }
 
     // 页面加载完成后执行
-    window.addEventListener('DOMContentLoaded', function() {
+    window.addEventListener('DOMContentLoaded', async function() {
       console.log('DOM content loaded');
       
       // 从URL参数获取结果类型
@@ -1264,7 +1318,7 @@
         console.log('New test completed, resetting report status and saving user data');
         localStorage.removeItem('reportGenerated_' + type);
         // 保存用户人格数据
-        saveUserPersonalityData(type);
+        await saveUserPersonalityData(type);
       }
       
       // 初始化页面

@@ -1184,8 +1184,104 @@
 
   <!-- 交互JS -->
   <script>
+    // API 地址配置
+    const API_CONFIG = {
+      remote: 'https://ayin-production.up.railway.app',
+      local: 'http://localhost:3000'
+    };
+    
+    // 获取当前使用的 API 地址
+    function getApiBase() {
+      return localStorage.getItem('useLocalApi') === 'true' 
+        ? API_CONFIG.local 
+        : API_CONFIG.remote;
+    }
+    
+    // 切换 API 地址
+    function toggleApiBase() {
+      const useLocal = localStorage.getItem('useLocalApi') !== 'true';
+      localStorage.setItem('useLocalApi', useLocal.toString());
+      const current = getApiBase();
+      alert(`已切换到: ${current}\n页面将重新加载`);
+      window.location.reload();
+    }
+    
     // 全局变量
-    const API_BASE = 'https://ayin-production.up.railway.app'; // 后端API地址
+    let API_BASE = getApiBase(); // 后端API地址
+    
+    // 更新用户数据到服务器（用于更新游戏ID或头像）
+    async function updateUserToServer(newGameId = null, newAvatarImage = null) {
+      const history = getTestHistory();
+      if (history.length === 0) {
+        console.log('没有测试历史，不更新用户数据');
+        return;
+      }
+      
+      const currentPersonality = history[0].type;
+      const currentGameId = newGameId !== null ? newGameId : localStorage.getItem('gameId');
+      
+      if (!currentGameId) {
+        console.log('没有游戏ID，不更新用户数据');
+        return;
+      }
+      
+      // 获取头像
+      let avatarImage = newAvatarImage;
+      if (avatarImage === null) {
+        try {
+          const savedAvatar = localStorage.getItem('userAvatar');
+          if (savedAvatar) {
+            const avatarData = JSON.parse(savedAvatar);
+            if (avatarData.type === 'preset') {
+              avatarImage = avatarData.image;
+            } else if (avatarData.type === 'custom') {
+              avatarImage = avatarData.image;
+            }
+          }
+        } catch (e) {
+          console.log('获取头像失败:', e);
+        }
+      }
+      
+      const randomNames = ['快乐的Tee', '勇敢的Runner', '聪明的Strategist', '幽默的Joker', '可靠的Supporter', '自信的Challenger', '冷静的Thinker', '独立的Grinder', '友善的Collector', '机智的Anchor'];
+      const userName = currentGameId || randomNames[Math.floor(Math.random() * randomNames.length)] + Math.floor(Math.random() * 1000);
+      
+      const userData = {
+        gameId: currentGameId,
+        name: userName,
+        personality: currentPersonality,
+        avatarImage: avatarImage || ''
+      };
+      
+      console.log('更新用户数据到服务器:', userData);
+      
+      try {
+        const response = await fetch(API_BASE + '/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(userData)
+        });
+        
+        const result = await response.json();
+        console.log('用户数据更新结果:', result);
+        
+        if (result.success) {
+          console.log('✅ 用户数据更新成功');
+          
+          // 清除相关缓存
+          const cacheKey = `users_${currentPersonality}`;
+          localStorage.removeItem(cacheKey);
+          localStorage.removeItem(`${cacheKey}_time`);
+          
+          // 刷新相同人格用户列表
+          fetchUsersFromServer(true);
+        }
+      } catch (error) {
+        console.error('❌ 更新用户数据失败:', error);
+      }
+    }
     
     // 人格数据
     const personalities = [
@@ -1811,7 +1907,7 @@
       const avatarFileInput = document.getElementById('avatarFileInput');
       
       avatarOptions.forEach(option => {
-        option.addEventListener('click', function() {
+        option.addEventListener('click', async function() {
           const avatarType = this.dataset.avatar;
           
           if (avatarType === 'custom') {
@@ -1826,6 +1922,9 @@
             
             // 保存到本地存储
             localStorage.setItem('userAvatar', JSON.stringify({ type: 'preset', image: avatarType }));
+            
+            // 更新用户数据到服务器
+            await updateUserToServer(null, avatarType);
             
             // 更新主页面头像
             updateMainAvatar();
@@ -1881,6 +1980,9 @@
           
           // 保存到本地存储
           localStorage.setItem('userAvatar', JSON.stringify({ type: 'custom', image: compressedDataUrl }));
+          
+          // 更新用户数据到服务器
+          await updateUserToServer(null, compressedDataUrl);
           
           // 更新主页面头像
           updateMainAvatar();
@@ -2270,7 +2372,7 @@
       });
       
       // 保存按钮点击事件
-      saveProfile.addEventListener('click', function() {
+      saveProfile.addEventListener('click', async function() {
         const gameId = profileGameIdInput.value.trim();
         
         // 计算字符数（中文算1个字符，英文2个算1个字符）
@@ -2305,7 +2407,9 @@
         
         // 清理旧的存储键
         localStorage.removeItem('userAvatarImage');
-        localStorage.removeItem('userAvatar');
+        
+        // 更新用户数据到服务器
+        await updateUserToServer(gameId);
         
         // 更新用户名字显示
         updateUserName();
