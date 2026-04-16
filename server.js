@@ -130,15 +130,45 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// 4. DELETE /api/users/:id - 删除用户数据
-app.delete('/api/users/:id', async (req, res) => {
+// ========== DELETE 路由 - 注意：更具体的路由必须放在前面！ ==========
+
+// 4. DELETE /api/users/all - 清除所有用户数据（需谨慎使用）
+app.delete('/api/users/all', async (req, res) => {
   try {
-    const { id } = req.params;
-    await User.findByIdAndDelete(id);
-    res.json({ success: true, message: '删除成功' });
+    console.log('=== 清除所有数据请求 ===');
+    
+    // 先获取将要删除的记录数
+    const countToDelete = await User.countDocuments();
+    
+    if (countToDelete === 0) {
+      return res.json({ 
+        success: true, 
+        message: '数据库中没有数据需要删除',
+        deletedCount: 0
+      });
+    }
+    
+    // 执行删除
+    console.log('开始清除所有数据，共', countToDelete, '条记录');
+    const result = await User.deleteMany({});
+    
+    console.log('清除完成 - 结果:', result);
+    console.log('删除的文档数:', result.deletedCount);
+    
+    res.json({ 
+      success: true, 
+      message: `成功清除所有 ${result.deletedCount} 条数据`,
+      deletedCount: result.deletedCount
+    });
   } catch (error) {
-    console.error('删除数据失败:', error);
-    res.json({ success: false, message: '删除失败', error: error.message });
+    console.error('=== 清除所有数据失败 ===');
+    console.error('错误名称:', error.name);
+    console.error('错误消息:', error.message);
+    res.json({ 
+      success: false, 
+      message: '清除失败: ' + error.message, 
+      error: error.message 
+    });
   }
 });
 
@@ -269,47 +299,21 @@ app.delete('/api/users/range', async (req, res) => {
   }
 });
 
-// 7. DELETE /api/users/all - 清除所有用户数据（需谨慎使用）
-app.delete('/api/users/all', async (req, res) => {
+// 6. DELETE /api/users/:id - 删除用户数据（必须放在最后！）
+app.delete('/api/users/:id', async (req, res) => {
   try {
-    console.log('=== 清除所有数据请求 ===');
-    
-    // 先获取将要删除的记录数
-    const countToDelete = await User.countDocuments();
-    
-    if (countToDelete === 0) {
-      return res.json({ 
-        success: true, 
-        message: '数据库中没有数据需要删除',
-        deletedCount: 0
-      });
-    }
-    
-    // 执行删除
-    console.log('开始清除所有数据，共', countToDelete, '条记录');
-    const result = await User.deleteMany({});
-    
-    console.log('清除完成 - 结果:', result);
-    console.log('删除的文档数:', result.deletedCount);
-    
-    res.json({ 
-      success: true, 
-      message: `成功清除所有 ${result.deletedCount} 条数据`,
-      deletedCount: result.deletedCount
-    });
+    const { id } = req.params;
+    await User.findByIdAndDelete(id);
+    res.json({ success: true, message: '删除成功' });
   } catch (error) {
-    console.error('=== 清除所有数据失败 ===');
-    console.error('错误名称:', error.name);
-    console.error('错误消息:', error.message);
-    res.json({ 
-      success: false, 
-      message: '清除失败: ' + error.message, 
-      error: error.message 
-    });
+    console.error('删除数据失败:', error);
+    res.json({ success: false, message: '删除失败', error: error.message });
   }
 });
 
-// 6. GET /api/statistics - 获取统计数据
+// ========== 其他 GET 路由 ==========
+
+// 7. GET /api/statistics - 获取统计数据
 app.get('/api/statistics', async (req, res) => {
   try {
     // 使用countDocuments而不是find().length，性能更好
