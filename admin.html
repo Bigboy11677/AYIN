@@ -72,7 +72,17 @@
   <nav class="bg-primary text-white shadow-md">
     <div class="container mx-auto px-4 py-3 flex justify-between items-center">
       <h1 class="text-xl font-bold">DDnet人格测试 - 后台管理</h1>
-      <div>
+      <div class="flex items-center gap-2">
+        <!-- API 地址显示和切换 -->
+        <div class="flex items-center gap-2 bg-white bg-opacity-20 px-3 py-1 rounded-lg">
+          <span class="text-sm">
+            <i class="fa fa-server mr-1"></i>
+            <span id="apiStatusText">远程</span>
+          </span>
+          <button id="toggleApiBtn" onclick="toggleApiBase()" class="text-sm bg-white bg-opacity-30 px-2 py-1 rounded hover:bg-opacity-50 transition-colors">
+            切换
+          </button>
+        </div>
         <button id="refreshBtn" class="px-4 py-2 bg-white text-primary rounded-lg font-medium hover:bg-gray-100 transition-colors">
           <i class="fa fa-refresh mr-2"></i> 刷新数据
         </button>
@@ -211,8 +221,30 @@
 
   <!-- 交互JS -->
   <script>
+    // API 地址配置
+    const API_CONFIG = {
+      remote: 'https://ayin-production.up.railway.app',
+      local: 'http://localhost:3000'
+    };
+    
+    // 获取当前使用的 API 地址
+    function getApiBase() {
+      return localStorage.getItem('useLocalApi') === 'true' 
+        ? API_CONFIG.local 
+        : API_CONFIG.remote;
+    }
+    
+    // 切换 API 地址
+    function toggleApiBase() {
+      const useLocal = localStorage.getItem('useLocalApi') !== 'true';
+      localStorage.setItem('useLocalApi', useLocal.toString());
+      const current = getApiBase();
+      alert(`已切换到: ${current}\n页面将重新加载`);
+      window.location.reload();
+    }
+    
     // 全局变量
-    const API_BASE = 'https://ayin-production.up.railway.app'; // 后端API地址
+    let API_BASE = getApiBase(); // 后端API地址
     const FAKE_PASSWORD = 'DD1314'; // 伪造的管理员密码（诱饵）
     function getRealPassword() {
       // 真实密码通过简单混淆
@@ -272,8 +304,19 @@
       '整活艺术家': '狐狸.png'
     };
 
+    // 更新 API 状态显示
+    function updateApiStatusText() {
+      const statusText = document.getElementById('apiStatusText');
+      if (statusText) {
+        const useLocal = localStorage.getItem('useLocalApi') === 'true';
+        statusText.textContent = useLocal ? '本地' : '远程';
+      }
+    }
+
     // 初始化
     document.addEventListener('DOMContentLoaded', function() {
+      // 更新 API 状态显示
+      updateApiStatusText();
       // 检查是否已登录
       checkLoginStatus();
       bindEvents();
