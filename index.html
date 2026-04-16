@@ -1655,6 +1655,45 @@
       }
     }
 
+    // 清除所有本地数据（完整清除）
+    function clearAllLocalData() {
+      if (!confirm('确定要清除所有本地数据吗？此操作将清除：\n\n• 已解锁人格图鉴\n• 测试历史记录\n• 用户头像设置\n• 游戏ID\n• 所有缓存数据\n\n此操作不可恢复！')) {
+        return;
+      }
+      
+      if (!confirm('再次确认：您真的要清除所有本地数据吗？')) {
+        return;
+      }
+      
+      // 获取所有以 users_ 开头的缓存键
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('users_')) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      // 清除所有相关数据
+      localStorage.removeItem('unlockedPersonalities');
+      localStorage.removeItem('testHistory');
+      localStorage.removeItem('userAvatar');
+      localStorage.removeItem('gameId');
+      localStorage.removeItem('hasShownGameIdModal');
+      localStorage.removeItem('adminLoggedIn');
+      localStorage.removeItem('adminLoginTime');
+      localStorage.removeItem('usingFakeData');
+      
+      // 清除所有用户缓存
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+      });
+      
+      // 重新初始化页面
+      alert('所有本地数据已清除！页面将重新加载。');
+      window.location.reload();
+    }
+
     // 检查是否从测试页面返回，并解锁相应人格
     function checkAndUnlockPersonality() {
       const urlParams = new URLSearchParams(window.location.search);

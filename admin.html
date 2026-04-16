@@ -106,7 +106,7 @@
       <h3 class="text-lg font-semibold mb-4 text-gray-700">
         <i class="fa fa-calendar mr-2"></i> 清除数据
       </h3>
-      <div class="flex flex-col md:flex-row gap-4 items-end">
+      <div class="flex flex-col md:flex-row gap-4 items-end mb-4">
         <div class="flex-1">
           <label class="block text-gray-700 mb-2">删除日期前</label>
           <input type="date" id="beforeDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
@@ -124,6 +124,14 @@
           </button>
         </div>
       </div>
+      
+      <!-- 清除所有数据按钮 -->
+      <div class="border-t border-gray-200 pt-4">
+        <button id="clearAllBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors">
+          <i class="fa fa-exclamation-triangle mr-2"></i> 清除所有数据
+        </button>
+      </div>
+      
       <p class="text-sm text-gray-500 mt-3">
         <i class="fa fa-info-circle mr-1"></i>
         只选"删除日期前"：删除该日期之前的所有数据；
@@ -349,6 +357,9 @@
       
       // 取消清除按钮
       document.getElementById('cancelClearBtn').addEventListener('click', cancelClearData);
+      
+      // 清除所有数据按钮
+      document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
       
       // 搜索按钮
       document.getElementById('searchBtn').addEventListener('click', searchUsers);
@@ -750,8 +761,69 @@
       }
     }
 
+    // 先预览将要删除的记录数
+    async function previewDeleteCount() {
+      const beforeDate = document.getElementById('beforeDate').value;
+      const afterDate = document.getElementById('afterDate').value;
+      
+      if (!beforeDate && !afterDate) {
+        return null;
+      }
+      
+      // 日期范围验证
+      if (beforeDate && afterDate) {
+        const before = new Date(beforeDate);
+        const after = new Date(afterDate);
+        if (after > before) {
+          alert('"删除日期后"不能晚于"删除日期前"');
+          return null;
+        }
+      }
+      
+      // 构建查询参数来统计数量
+      let url = API_BASE + '/api/users?';
+      const params = [];
+      if (beforeDate) params.push(`beforeDate=${encodeURIComponent(beforeDate)}`);
+      if (afterDate) params.push(`afterDate=${encodeURIComponent(afterDate)}`);
+      
+      try {
+        // 使用已有API获取符合条件的数据来统计数量
+        const response = await fetch(API_BASE + '/api/users');
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          let count = 0;
+          const now = new Date();
+          
+          data.data.forEach(user => {
+            const userDate = new Date(user.timestamp);
+            
+            let match = true;
+            if (beforeDate) {
+              const before = new Date(beforeDate);
+              before.setHours(23, 59, 59, 999);
+              if (userDate > before) match = false;
+            }
+            if (afterDate) {
+              const after = new Date(afterDate);
+              after.setHours(0, 0, 0, 0);
+              if (userDate < after) match = false;
+            }
+            
+            if (match) count++;
+          });
+          
+          return count;
+        }
+      } catch (error) {
+        console.error('获取预览数量失败:', error);
+      }
+      
+      return null;
+    }
+
     // 清除指定日期范围的数据
-    function clearRangeData() {
+    async function clearRangeData() {
       console.log('清除数据按钮被点击');
       
       // 检查是否使用伪造密码
@@ -773,13 +845,32 @@
         return;
       }
       
+      // 日期范围验证
+      if (beforeDate && afterDate) {
+        const before = new Date(beforeDate);
+        const after = new Date(afterDate);
+        if (after > before) {
+          alert('"删除日期后"不能晚于"删除日期前"');
+          return;
+        }
+      }
+      
+      // 获取预览数量
+      const previewCount = await previewDeleteCount();
+      
       let message = '';
       if (beforeDate && afterDate) {
-        message = `确定要删除 ${afterDate} 到 ${beforeDate} 之间的所有数据吗？此操作不可撤销！`;
+        message = `确定要删除 ${afterDate} 到 ${beforeDate} 之间的`;
       } else if (beforeDate) {
-        message = `确定要删除 ${beforeDate} 之前的所有数据吗？此操作不可撤销！`;
+        message = `确定要删除 ${beforeDate} 之前的`;
       } else if (afterDate) {
-        message = `确定要删除 ${afterDate} 之后的所有数据吗？此操作不可撤销！`;
+        message = `确定要删除 ${afterDate} 之后的`;
+      }
+      
+      if (previewCount !== null) {
+        message += ` ${previewCount} 条数据吗？此操作不可撤销！`;
+      } else {
+        message += ' 所有数据吗？此操作不可撤销！';
       }
       
       if (!confirm(message)) {
@@ -790,14 +881,10 @@
       let url = API_BASE + '/api/users/range?';
       const params = [];
       if (beforeDate) {
-        // 添加时间部分，确保包含当天的所有时间
-        const beforeDateWithTime = beforeDate + 'T23:59:59';
-        params.push(`beforeDate=${encodeURIComponent(beforeDateWithTime)}`);
+        params.push(`beforeDate=${encodeURIComponent(beforeDate)}`);
       }
       if (afterDate) {
-        // 添加时间部分，确保从当天的0点开始
-        const afterDateWithTime = afterDate + 'T00:00:00';
-        params.push(`afterDate=${encodeURIComponent(afterDateWithTime)}`);
+        params.push(`afterDate=${encodeURIComponent(afterDate)}`);
       }
       url += params.join('&');
       
@@ -828,6 +915,57 @@
       });
     }
     
+    // 清除所有数据
+    async function clearAllData() {
+      console.log('清除所有数据按钮被点击');
+      
+      // 检查是否使用伪造密码
+      const usingFakeData = localStorage.getItem('usingFakeData') === 'true';
+      
+      if (usingFakeData) {
+        alert('演示模式下无法清除数据');
+        return;
+      }
+      
+      // 获取统计数据来显示将要删除的数量
+      try {
+        const statsResponse = await fetch(API_BASE + '/api/statistics');
+        const statsData = await statsResponse.json();
+        const totalCount = statsData.success ? statsData.data.totalUsers : '?';
+        
+        if (!confirm(`确定要清除所有 ${totalCount} 条数据吗？此操作不可撤销且非常危险！`)) {
+          return;
+        }
+      } catch (error) {
+        if (!confirm('确定要清除所有数据吗？此操作不可撤销且非常危险！')) {
+          return;
+        }
+      }
+      
+      // 二次确认
+      if (!confirm('再次确认：您真的要清除所有数据吗？这将删除数据库中的所有用户记录！')) {
+        return;
+      }
+
+      fetch(API_BASE + '/api/users/all', {
+        method: 'DELETE'
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('响应数据:', data);
+        if (data.success) {
+          alert(data.message);
+          loadUsers();
+        } else {
+          alert('清除失败：' + (data.message || '未知错误'));
+        }
+      })
+      .catch(error => {
+        console.error('清除数据失败:', error);
+        alert('清除失败，请稍后重试。错误：' + error.message);
+      });
+    }
+
     // 取消清除数据
     function cancelClearData() {
       document.getElementById('beforeDate').value = '';

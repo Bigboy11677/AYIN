@@ -98,6 +98,23 @@ app.get('/api/users/same-personality', async (req, res) => {
   }
 });
 
+// 测试端点：查看数据库中的数据格式
+app.get('/api/test/sample-data', async (req, res) => {
+  try {
+    const sampleData = await User.findOne().sort({ timestamp: -1 });
+    const allData = await User.find().sort({ timestamp: -1 }).limit(5);
+    
+    res.json({ 
+      success: true, 
+      sample: sampleData,
+      recent: allData,
+      count: await User.countDocuments()
+    });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+});
+
 // 3. GET /api/users - 获取所有用户数据（用于管理页面）
 app.get('/api/users', async (req, res) => {
   try {
@@ -130,34 +147,98 @@ app.delete('/api/users/range', async (req, res) => {
   try {
     const { beforeDate, afterDate } = req.query;
     
-    console.log('删除数据请求 - beforeDate:', beforeDate, 'afterDate:', afterDate);
+    console.log('=== 删除数据请求 ===');
+    console.log('原始参数 - beforeDate:', beforeDate, 'afterDate:', afterDate);
+    
+    // 首先获取数据库中的一些样本数据来查看格式
+    const sampleData = await User.findOne().sort({ timestamp: -1 });
+    if (sampleData) {
+      console.log('样本数据 - timestamp:', sampleData.timestamp);
+      console.log('样本数据 - timestamp类型:', typeof sampleData.timestamp);
+    }
     
     // 构建查询条件
     let query = {};
     
     if (beforeDate) {
+      // 健壮的日期处理：支持多种格式
       const before = new Date(beforeDate);
-      console.log('解析后的 beforeDate:', before);
-      query.timestamp = { ...query.timestamp, $lt: before };
+      // 验证日期是否有效
+      if (isNaN(before.getTime())) {
+        return res.json({ 
+          success: false, 
+          message: '无效的日期格式: ' + beforeDate 
+        });
+      }
+      // 设置为当天的结束时间（23:59:59.999）
+      before.setHours(23, 59, 59, 999);
+      console.log('处理后的 beforeDate:', before);
+      query.timestamp = { ...query.timestamp, $lte: before };
     }
     
     if (afterDate) {
+      // 健壮的日期处理：支持多种格式
       const after = new Date(afterDate);
-      console.log('解析后的 afterDate:', after);
-      query.timestamp = { ...query.timestamp, $gt: after };
+      // 验证日期是否有效
+      if (isNaN(after.getTime())) {
+        return res.json({ 
+          success: false, 
+          message: '无效的日期格式: ' + afterDate 
+        });
+      }
+      // 设置为当天的开始时间（00:00:00.000）
+      after.setHours(0, 0, 0, 0);
+      console.log('处理后的 afterDate:', after);
+      query.timestamp = { ...query.timestamp, $gte: after };
     }
     
-    console.log('查询条件:', query);
+    // 验证日期范围的合理性
+    if (beforeDate && afterDate) {
+      const before = new Date(beforeDate);
+      const after = new Date(afterDate);
+      if (after > before) {
+        return res.json({ 
+          success: false, 
+          message: '"删除日期后"不能晚于"删除日期前"' 
+        });
+      }
+    }
+    
+    console.log('最终查询条件:', query);
     
     // 如果没有日期条件，不执行删除
     if (!beforeDate && !afterDate) {
       return res.json({ success: false, message: '请至少指定一个日期条件' });
     }
     
+    // 先查询一下有多少条数据将要被删除
+    const countToDelete = await User.countDocuments(query);
+    console.log('将要删除的数据条数:', countToDelete);
+    
+    // 如果没有数据要删除，提前返回
+    if (countToDelete === 0) {
+      let message = '';
+      if (beforeDate && afterDate) {
+        message = `在 ${afterDate} 到 ${beforeDate} 之间没有找到数据`;
+      } else if (beforeDate) {
+        message = `在 ${beforeDate} 之前没有找到数据`;
+      } else if (afterDate) {
+        message = `在 ${afterDate} 之后没有找到数据`;
+      }
+      return res.json({ 
+        success: true, 
+        message: message,
+        deletedCount: 0
+      });
+    }
+    
     // 执行删除
+    console.log('开始执行删除...');
     const result = await User.deleteMany(query);
     
-    console.log('删除结果:', result);
+    console.log('删除完成 - 结果:', result);
+    console.log('删除的文档数:', result.deletedCount);
+    console.log('确认:', result.acknowledged);
     
     let message = '';
     if (beforeDate && afterDate) {
@@ -168,14 +249,63 @@ app.delete('/api/users/range', async (req, res) => {
       message = `成功删除 ${afterDate} 之后的 ${result.deletedCount} 条数据`;
     }
     
+    console.log('返回消息:', message);
+    
     res.json({ 
       success: true, 
       message: message,
       deletedCount: result.deletedCount
     });
   } catch (error) {
-    console.error('删除数据失败:', error);
-    res.json({ success: false, message: '删除失败', error: error.message });
+    console.error('=== 删除数据失败 ===');
+    console.error('错误名称:', error.name);
+    console.error('错误消息:', error.message);
+    console.error('错误堆栈:', error.stack);
+    res.json({ 
+      success: false, 
+      message: `删除失败: ${error.message}`, 
+      error: error.message 
+    });
+  }
+});
+
+// 7. DELETE /api/users/all - 清除所有用户数据（需谨慎使用）
+app.delete('/api/users/all', async (req, res) => {
+  try {
+    console.log('=== 清除所有数据请求 ===');
+    
+    // 先获取将要删除的记录数
+    const countToDelete = await User.countDocuments();
+    
+    if (countToDelete === 0) {
+      return res.json({ 
+        success: true, 
+        message: '数据库中没有数据需要删除',
+        deletedCount: 0
+      });
+    }
+    
+    // 执行删除
+    console.log('开始清除所有数据，共', countToDelete, '条记录');
+    const result = await User.deleteMany({});
+    
+    console.log('清除完成 - 结果:', result);
+    console.log('删除的文档数:', result.deletedCount);
+    
+    res.json({ 
+      success: true, 
+      message: `成功清除所有 ${result.deletedCount} 条数据`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('=== 清除所有数据失败 ===');
+    console.error('错误名称:', error.name);
+    console.error('错误消息:', error.message);
+    res.json({ 
+      success: false, 
+      message: `清除失败: ' + error.message, 
+      error: error.message 
+    });
   }
 });
 
