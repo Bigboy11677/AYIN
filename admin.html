@@ -557,6 +557,49 @@
       const personalitySet = new Set(users.map(user => user.personality));
       personalityTypes = Array.from(personalitySet);
       
+      // 移除重复的人格类型（处理中英文混用的情况）
+      const personalityMap = {
+        'Emotional Player': 'Emotional Player',
+        'Hidden Personality': 'Hidden Personality',
+        'Challenge Avoider': 'Challenge Avoider',
+        'Lying Flat Fish': 'Lying Flat Fish',
+        'Rusher': 'Rusher',
+        'Bald Grinder': 'Bald Grinder',
+        'Balanced Player': 'Balanced Player',
+        'Rational Thinker': 'Rational Thinker',
+        'Responsible Anchor': 'Responsible Anchor',
+        'Self-Deprecating Humorist': 'Self-Deprecating Humorist',
+        'Confident Competitor': 'Confident Competitor',
+        'Carry Goat': 'Carry Goat',
+        'Friend Collector': 'Friend Collector',
+        'Team Supporter': 'Team Supporter',
+        'Jokester': 'Jokester',
+        // 中文对应
+        '键盘粉碎者': 'Emotional Player',
+        '收集狂': 'Hidden Personality',
+        '摆烂仙人': 'Challenge Avoider',
+        '躺平咸鱼': 'Lying Flat Fish',
+        '偷跑Tee': 'Rusher',
+        '独攀者': 'Bald Grinder',
+        '中立者': 'Balanced Player',
+        '策略大师': 'Rational Thinker',
+        '背锅侠': 'Responsible Anchor',
+        '小丑竟是我': 'Self-Deprecating Humorist',
+        '装杯带师': 'Confident Competitor',
+        '带飞者': 'Carry Goat',
+        '扩列狂魔': 'Friend Collector',
+        '团队依赖户': 'Team Supporter',
+        '整活艺术家': 'Jokester'
+      };
+      
+      // 标准化人格类型名称
+      const standardizedTypes = new Set();
+      personalityTypes.forEach(type => {
+        const standardType = personalityMap[type] || type;
+        standardizedTypes.add(standardType);
+      });
+      personalityTypes = Array.from(standardizedTypes).sort();
+      
       const select = document.getElementById('personalityFilter');
       select.innerHTML = '<option value="all">全部</option>';
       
@@ -682,10 +725,51 @@
       const searchTerm = document.getElementById('searchInput').value.toLowerCase();
       const personalityFilter = document.getElementById('personalityFilter').value;
       
+      // 人格类型映射（处理中英文混用）
+      const personalityMap = {
+        'Emotional Player': 'Emotional Player',
+        'Hidden Personality': 'Hidden Personality',
+        'Challenge Avoider': 'Challenge Avoider',
+        'Lying Flat Fish': 'Lying Flat Fish',
+        'Rusher': 'Rusher',
+        'Bald Grinder': 'Bald Grinder',
+        'Balanced Player': 'Balanced Player',
+        'Rational Thinker': 'Rational Thinker',
+        'Responsible Anchor': 'Responsible Anchor',
+        'Self-Deprecating Humorist': 'Self-Deprecating Humorist',
+        'Confident Competitor': 'Confident Competitor',
+        'Carry Goat': 'Carry Goat',
+        'Friend Collector': 'Friend Collector',
+        'Team Supporter': 'Team Supporter',
+        'Jokester': 'Jokester',
+        // 中文对应
+        '键盘粉碎者': 'Emotional Player',
+        '收集狂': 'Hidden Personality',
+        '摆烂仙人': 'Challenge Avoider',
+        '躺平咸鱼': 'Lying Flat Fish',
+        '偷跑Tee': 'Rusher',
+        '独攀者': 'Bald Grinder',
+        '中立者': 'Balanced Player',
+        '策略大师': 'Rational Thinker',
+        '背锅侠': 'Responsible Anchor',
+        '小丑竟是我': 'Self-Deprecating Humorist',
+        '装杯带师': 'Confident Competitor',
+        '带飞者': 'Carry Goat',
+        '扩列狂魔': 'Friend Collector',
+        '团队依赖户': 'Team Supporter',
+        '整活艺术家': 'Jokester'
+      };
+      
       filteredUsers = users.filter(user => {
         const matchesSearch = user.gameId.toLowerCase().includes(searchTerm) || 
                              user.name.toLowerCase().includes(searchTerm);
-        const matchesPersonality = personalityFilter === 'all' || user.personality === personalityFilter;
+        
+        let matchesPersonality = true;
+        if (personalityFilter !== 'all') {
+          const userPersonality = personalityMap[user.personality] || user.personality;
+          matchesPersonality = userPersonality === personalityFilter;
+        }
+        
         return matchesSearch && matchesPersonality;
       });
       
